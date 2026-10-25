@@ -9,8 +9,68 @@ Application web de gestion et d'optimisation des livraisons : centralisation des
 
 ---
 
+## Aperçu de l'interface
+
+Captures réalisées avec le jeu de données de démonstration (`scripts/reset-demo.sql`), connecté en `ADMIN`.
+
+<table>
+  <tr>
+    <td width="50%">
+      <img src="docs/screenshots/01-login.jpg" alt="Écran de connexion">
+      <br><sub><b>Connexion</b> — formulaire sécurisé, redirection vers les commandes après authentification.</sub>
+    </td>
+    <td width="50%">
+      <img src="docs/screenshots/02-commandes.jpg" alt="Liste des commandes">
+      <br><sub><b>Commandes</b> — filtres Toutes / En attente / À affecter, recherche instantanée, priorité et livreur.</sub>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%">
+      <img src="docs/screenshots/03-commande-detail.jpg" alt="Détail d'une commande">
+      <br><sub><b>Détail</b> — progression du workflow, prix détaillé par barème et historique des transitions.</sub>
+    </td>
+    <td width="50%">
+      <img src="docs/screenshots/04-incidents.jpg" alt="Liste des incidents">
+      <br><sub><b>Incidents</b> — compteurs par statut, filtres type/statut, résolution avec transition de commande.</sub>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%">
+      <img src="docs/screenshots/05-tableau-bord.jpg" alt="Tableau de bord de suivi">
+      <br><sub><b>Suivi</b> — indicateurs temps réel, tournées actives, retards et temps de trajet estimés.</sub>
+    </td>
+    <td width="50%">
+      <img src="docs/screenshots/06-carte.jpg" alt="Carte temps réel">
+      <br><sub><b>Carte</b> — positions des livreurs et des commandes actives, rafraîchissement automatique.</sub>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%">
+      <img src="docs/screenshots/07-statistiques.jpg" alt="Statistiques">
+      <br><sub><b>Statistiques</b> — période, livreur et zone ; livraisons, chiffre d'affaires et taux de réussite.</sub>
+    </td>
+    <td width="50%">
+      <img src="docs/screenshots/08-livreurs.jpg" alt="Liste des livreurs">
+      <br><sub><b>Livreurs</b> — flotte, zones d'activité, capacités, véhicules et statuts.</sub>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%">
+      <img src="docs/screenshots/09-tarifs.jpg" alt="Barèmes de facturation">
+      <br><sub><b>Barèmes</b> — prix fixe, prix au km/kg/m³ et majorations par priorité, par zone.</sub>
+    </td>
+    <td width="50%">
+      <p><b>Autres écrans</b></p>
+      <p><sub>Les clients, les colis et les comptes utilisateurs disposent de listes et de formulaires équivalents. Les actions visibles dépendent du rôle connecté : <code>ADMIN</code> (tout), <code>DISPATCHER</code> (exploitation) ou <code>LIVREUR</code> (commandes, suivi, incidents).</sub></p>
+    </td>
+  </tr>
+</table>
+
+---
+
 ## Sommaire
 
+- [Aperçu de l'interface](#aperçu-de-linterface)
 - [Aperçu](#aperçu)
 - [Fonctionnalités](#fonctionnalités)
 - [Stack technique](#stack-technique)
@@ -296,6 +356,7 @@ mvnw.cmd test        # Windows
 livraison/
 ├── pom.xml
 ├── mvnw / mvnw.cmd              # wrapper Maven
+├── docs/screenshots/            # captures d'écran utilisées par le README
 ├── scripts/
 │   ├── reset-demo.sql           # jeu de données de démonstration
 │   └── simuler-livreurs.ps1     # simulation GPS de la flotte
