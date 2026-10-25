@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<!-- Messages flash rendus sous forme de toasts, montes automatiquement par
+     app.js (initToasts) puis fermables par l'utilisateur. -->
+<div th:fragment="flash" class="toast-container app-toasts position-fixed top-0 end-0 p-3"
+     role="region" aria-live="polite" aria-label="Notifications">
+    <div th:if="${successMessage}" class="toast app-toast show" data-app-autotoast role="status">
+        <div class="d-flex align-items-center">
+            <div class="toast-body d-flex align-items-center gap-2">
+                <i class="bi bi-check-circle-fill text-success"></i>
+                <span th:text="${successMessage}">Succès</span>
+            </div>
+            <button type="button" class="btn-close me-2 m-auto" data-bs-dismiss="toast" aria-label="Fermer"></button>
+        </div>
+    </div>
+    <div th:if="${errorMessage}" class="toast app-toast show" data-app-autotoast role="alert">
+        <div class="d-flex align-items-center">
+            <div class="toast-body d-flex align-items-center gap-2">
+                <i class="bi bi-exclamation-triangle-fill text-danger"></i>
+                <span th:text="${errorMessage}">Erreur</span>
+            </div>
+            <button type="button" class="btn-close me-2 m-auto" data-bs-dismiss="toast" aria-label="Fermer"></button>
+        </div>
+    </div>
+</div>
+</body>
+</html>

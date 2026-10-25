@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="fr">
+<head th:replace="~{fragments/head :: head(${utilisateur.id == null} ? 'Nouvel utilisateur' : 'Modifier l’utilisateur')}"></head>
+<body class="app-body">
+    <!-- Barre de navigation -->
+    <div th:replace="~{fragments/nav :: nav('utilisateurs')}"></div>
+
+    <main class="app-main">
+    <div class="container-fluid app-page app-page--narrow">
+        <div class="page-header">
+            <div>
+                <h1 class="page-header__title"
+                    th:text="${utilisateur.id == null} ? 'Nouvel utilisateur' : 'Modifier l’utilisateur'">Utilisateur</h1>
+                <p class="page-header__subtitle">Identifiants, rôle et rattachement</p>
+            </div>
+            <div class="page-header__actions">
+                <a th:href="@{/utilisateurs}" class="btn btn-outline-secondary btn-icon">
+                    <i class="bi bi-arrow-left"></i> Retour
+                </a>
+            </div>
+        </div>
+
+        <div th:if="${errorMessage}" class="alert alert-danger" role="alert">
+            <i class="bi bi-exclamation-triangle me-1"></i><span th:text="${errorMessage}"></span>
+        </div>
+
+        <form th:action="@{/utilisateurs/save}" th:object="${utilisateur}" method="post" class="form-sections">
+            <input type="hidden" th:field="*{id}">
+
+            <section class="form-section-card">
+                <div class="form-section-card__header">
+                    <i class="bi bi-shield-lock"></i>
+                    <div>
+                        <h3>Compte</h3>
+                        <div class="small text-muted">Identifiant et mot de passe</div>
+                    </div>
+                </div>
+                <div class="form-section-card__body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label for="username" class="form-label">Identifiant <span class="text-danger">*</span></label>
+                            <input type="text" id="username" th:field="*{username}" class="form-control"
+                                   required autocomplete="off">
+                            <div class="form-text"><i class="bi bi-info-circle me-1"></i>Doit être unique.</div>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="password" class="form-label">
+                                Mot de passe
+                                <span class="text-danger" th:if="${utilisateur.id == null}">*</span>
+                            </label>
+                            <input type="password" id="password" th:field="*{password}" class="form-control"
+                                   autocomplete="new-password"
+                                   th:required="${utilisateur.id == null}">
+                            <div class="form-text" th:if="${utilisateur.id == null}">
+                                <i class="bi bi-info-circle me-1"></i>Obligatoire à la création.
+                            </div>
+                            <div class="form-text" th:if="${utilisateur.id != null}">
+                                <i class="bi bi-info-circle me-1"></i>Laisser vide pour conserver le mot de passe actuel.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="form-section-card">
+                <div class="form-section-card__header">
+                    <i class="bi bi-person-badge"></i>
+                    <div>
+                        <h3>Identité</h3>
+                        <div class="small text-muted">Nom et prénom de l'utilisateur</div>
+                    </div>
+                </div>
+                <div class="form-section-card__body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label for="prenom" class="form-label">Prénom <span class="text-danger">*</span></label>
+                            <input type="text" id="prenom" th:field="*{prenom}" class="form-control" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="nom" class="form-label">Nom <span class="text-danger">*</span></label>
+                            <input type="text" id="nom" th:field="*{nom}" class="form-control" required>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="form-section-card">
+                <div class="form-section-card__header">
+                    <i class="bi bi-person-check"></i>
+                    <div>
+                        <h3>Rôle &amp; accès</h3>
+                        <div class="small text-muted">Droits et rattachement à un livreur</div>
+                    </div>
+                </div>
+                <div class="form-section-card__body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label for="role" class="form-label">Rôle <span class="text-danger">*</span></label>
+                            <select id="role" th:field="*{role}" class="form-select" required>
+                                <option value="">-- Choisir un rôle --</option>
+                                <option th:each="r : ${roles}" th:value="${r}" th:text="${r.libelle}"></option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="livreur" class="form-label">Livreur lié</label>
+                            <select id="livreur" th:field="*{livreur}" class="form-select">
+                                <option value="">-- Aucun --</option>
+                                <option th:each="l : ${livreurs}" th:value="${l.id}"
+                                        th:text="${l.prenom + ' ' + l.nom}"></option>
+                            </select>
+                            <div class="form-text"><i class="bi bi-info-circle me-1"></i>Optionnel — utile pour un compte de rôle LIVREUR.</div>
+                        </div>
+                        <div class="col-12">
+                            <div class="form-check">
+                                <input type="checkbox" id="actif" th:field="*{actif}" class="form-check-input">
+                                <label for="actif" class="form-check-label">
+                                    Compte actif <span class="text-muted small">— un compte inactif ne peut pas se connecter</span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <div class="form-sticky-actions">
+                <a th:href="@{/utilisateurs}" class="btn btn-outline-secondary btn-icon">
+                    <i class="bi bi-x-lg"></i> Annuler
+                </a>
+                <button type="submit" class="btn btn-success btn-icon">
+                    <i class="bi bi-check2-circle"></i> Enregistrer
+                </button>
+            </div>
+        </form>
+    </div>
+    </main>
+
+    <script th:src="@{/js/app.js}"></script>
+</body>
+</html>

@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="fr">
+<head th:replace="~{fragments/head :: head('Statistiques')}"></head>
+<body class="app-body">
+    <!-- Barre de navigation -->
+    <div th:replace="~{fragments/nav :: nav('statistiques')}"></div>
+
+    <main class="app-main">
+    <div class="container-fluid app-page">
+        <div class="page-header">
+            <div>
+                <h1 class="page-header__title">Statistiques</h1>
+                <p class="page-header__subtitle">
+                    Indicateurs agrégés sur la période sélectionnée
+                    <span th:if="${debut != null or fin != null}">
+                        — du <span th:text="${debut}">—</span> au <span th:text="${fin}">—</span>
+                    </span>
+                    <span th:if="${debut == null and fin == null}">— tout l'historique</span>.
+                </p>
+            </div>
+            <div class="page-header__actions">
+                <a th:href="@{/statistiques}" class="btn btn-outline-secondary btn-icon">
+                    <i class="bi bi-arrow-counterclockwise"></i> Réinitialiser
+                </a>
+            </div>
+        </div>
+
+        <!-- Périodes prédéfinies -->
+        <div class="segment-pills" role="group" aria-label="Périodes prédéfinies">
+            <a class="segment-pill" th:classappend="${periode == 'jour' and !personnalise} ? 'active'"
+               th:href="@{/statistiques(periode='jour',livreurId=${livreurSelectionne},zone=${zoneSelectionnee})}">
+                <i class="bi bi-calendar-day"></i> Jour
+            </a>
+            <a class="segment-pill" th:classappend="${periode == 'semaine' and !personnalise} ? 'active'"
+               th:href="@{/statistiques(periode='semaine',livreurId=${livreurSelectionne},zone=${zoneSelectionnee})}">
+                <i class="bi bi-calendar-week"></i> Semaine
+            </a>
+            <a class="segment-pill" th:classappend="${periode == 'mois' and !personnalise} ? 'active'"
+               th:href="@{/statistiques(periode='mois',livreurId=${livreurSelectionne},zone=${zoneSelectionnee})}">
+                <i class="bi bi-calendar-month"></i> Mois
+            </a>
+            <a class="segment-pill" th:classappend="${periode == 'tout' and !personnalise} ? 'active'"
+               th:href="@{/statistiques(periode='tout',livreurId=${livreurSelectionne},zone=${zoneSelectionnee})}">
+                <i class="bi bi-infinity"></i> Tout
+            </a>
+        </div>
+
+        <!-- Filtres -->
+        <div class="app-card mb-4">
+            <div class="app-card__header">
+                <h5 class="mb-0"><i class="bi bi-funnel me-2"></i>Filtres</h5>
+                <span class="text-muted small" th:if="${personnalise}">
+                    <i class="bi bi-info-circle"></i> Période personnalisée
+                </span>
+            </div>
+            <div class="app-card__body">
+                <form method="get" th:action="@{/statistiques}" class="row g-3 align-items-end">
+                    <div class="col-6 col-md-3">
+                        <label class="form-label" for="debut">Du</label>
+                        <input type="date" class="form-control" id="debut" name="debut" th:value="${debut}">
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <label class="form-label" for="fin">Au</label>
+                        <input type="date" class="form-control" id="fin" name="fin" th:value="${fin}">
+                    </div>
+                    <div class="col-12 col-md-2">
+                        <label class="form-label" for="livreurId">Livreur</label>
+                        <select class="form-select" id="livreurId" name="livreurId">
+                            <option value="">Tous</option>
+                            <option th:each="l : ${livreurs}" th:value="${l.id}"
+                                    th:selected="${livreurSelectionne != null and livreurSelectionne == l.id}"
+                                    th:text="${l.prenom + ' ' + l.nom}">Livreur</option>
+                        </select>
+                    </div>
+                    <div class="col-12 col-md-2">
+                        <label class="form-label" for="zone">Zone</label>
+                        <select class="form-select" id="zone" name="zone">
+                            <option value="">Toutes</option>
+                            <option th:each="z : ${zones}" th:value="${z}"
+                                    th:selected="${zoneSelectionnee != null and zoneSelectionnee == z}"
+                                    th:text="${z}">zone</option>
+                        </select>
+                    </div>
+                    <div class="col-12 col-md-2">
+                        <button type="submit" class="btn btn-primary btn-icon w-100">
+                            <i class="bi bi-search"></i> Filtrer
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Bandeau KPI -->
+        <div class="kpi-grid">
+            <div class="kpi-card kpi-card--success">
+                <span class="kpi-card__icon"><i class="bi bi-check2-circle"></i></span>
+                <span class="kpi-card__label">Livraisons</span>
+                <div class="kpi-card__value" th:text="${statistiques.nombreLivraisons}">0</div>
+                <div class="kpi-card__trend"><i class="bi bi-dot"></i> réussies sur la période</div>
+            </div>
+            <div class="kpi-card kpi-card--success">
+                <span class="kpi-card__icon"><i class="bi bi-cash-stack"></i></span>
+                <span class="kpi-card__label">Chiffre d'affaires</span>
+                <div class="kpi-card__value"><span th:text="${statistiques.chiffreAffaires ?: 0}">0</span> <small class="text-muted">Ar</small></div>
+                <div class="kpi-card__trend"><i class="bi bi-dot"></i> cumul de la période</div>
+            </div>
+            <div class="kpi-card kpi-card--info">
+                <span class="kpi-card__icon"><i class="bi bi-signpost-split"></i></span>
+                <span class="kpi-card__label">Distance totale</span>
+                <div class="kpi-card__value"><span th:text="${statistiques.distanceTotaleKm ?: 0}">0</span> <small class="text-muted">km</small></div>
+                <div class="kpi-card__trend"><i class="bi bi-dot"></i> livraisons cumulées</div>
+            </div>
+            <div class="kpi-card kpi-card--warning">
+                <span class="kpi-card__icon"><i class="bi bi-clock-history"></i></span>
+                <span class="kpi-card__label">Délai moyen</span>
+                <div class="kpi-card__value"><span th:text="${statistiques.delaiMoyenHeures ?: 0}">0</span> <small class="text-muted">h</small></div>
+                <div class="kpi-card__trend"><i class="bi bi-dot"></i> par livraison</div>
+            </div>
+            <div class="kpi-card kpi-card--info">
+                <span class="kpi-card__icon"><i class="bi bi-graph-up"></i></span>
+                <span class="kpi-card__label">Revenu moyen</span>
+                <div class="kpi-card__value"><span th:text="${statistiques.revenuMoyen ?: 0}">0</span> <small class="text-muted">Ar</small></div>
+                <div class="kpi-card__trend"><i class="bi bi-dot"></i> par livraison</div>
+            </div>
+            <div class="kpi-card kpi-card--success">
+                <span class="kpi-card__icon"><i class="bi bi-emoji-smile"></i></span>
+                <span class="kpi-card__label">Taux de réussite</span>
+                <div class="kpi-card__value" th:text="${statistiques.tauxReussite ?: 0} + ' %'">0 %</div>
+                <div class="kpi-card__trend is-up"><i class="bi bi-arrow-up-right"></i> issues favorables</div>
+            </div>
+            <div class="kpi-card kpi-card--danger">
+                <span class="kpi-card__icon"><i class="bi bi-emoji-frown"></i></span>
+                <span class="kpi-card__label">Taux d'échec</span>
+                <div class="kpi-card__value" th:text="${statistiques.tauxEchec ?: 0} + ' %'">0 %</div>
+                <div class="kpi-card__trend is-down"><i class="bi bi-arrow-down-right"></i> à surveiller</div>
+            </div>
+            <div class="kpi-card kpi-card--warning">
+                <span class="kpi-card__icon"><i class="bi bi-exclamation-triangle"></i></span>
+                <span class="kpi-card__label">Échecs / Annulées / Retours</span>
+                <div class="kpi-card__value kpi-card__value--sm">
+                    <span th:text="${statistiques.nombreEchecs}">0</span> /
+                    <span th:text="${statistiques.nombreAnnulees}">0</span> /
+                    <span th:text="${statistiques.nombreRetournes}">0</span>
+                </div>
+                <div class="kpi-card__trend"><i class="bi bi-dot"></i> incidents de parcours</div>
+            </div>
+        </div>
+
+        <!-- Graphiques -->
+        <div class="row g-3 mb-4">
+            <div class="col-lg-4">
+                <div class="app-card h-100">
+                    <div class="app-card__header">
+                        <h5 class="mb-0"><i class="bi bi-pie-chart me-2"></i>Commandes par statut</h5>
+                    </div>
+                    <div class="app-card__body">
+                        <div class="chart-wrap chart-wrap--donut">
+                            <canvas id="chartStatut" aria-label="Commandes par statut" role="img"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-8">
+                <div class="app-card h-100">
+                    <div class="app-card__header">
+                        <h5 class="mb-0"><i class="bi bi-bar-chart me-2"></i>Livraisons par livreur</h5>
+                        <span class="text-muted small">sur la période</span>
+                    </div>
+                    <div class="app-card__body">
+                        <div class="chart-wrap chart-wrap--bar">
+                            <canvas id="chartLivreurs" aria-label="Livraisons par livreur" role="img"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row g-3 mb-4">
+            <div class="col-12">
+                <div class="app-card">
+                    <div class="app-card__header">
+                        <h5 class="mb-0"><i class="bi bi-graph-up-arrow me-2"></i>Chiffre d'affaires par livreur</h5>
+                        <span class="text-muted small">données agrégées par livreur</span>
+                    </div>
+                    <div class="app-card__body">
+                        <div class="chart-wrap chart-wrap--line">
+                            <canvas id="chartCA" aria-label="Chiffre d'affaires par livreur" role="img"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tableau détaillé -->
+        <div class="app-table-wrap table-responsive">
+            <table class="table table-hover app-table" id="parLivreurTable">
+                <thead>
+                    <tr>
+                        <th>Livreur</th>
+                        <th class="text-end">Livraisons</th>
+                        <th class="text-end">Chiffre d'affaires</th>
+                        <th class="text-end">Distance</th>
+                        <th class="text-end">Taux de réussite</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="l : ${statistiques.parLivreur}"
+                        th:attr="data-livreur=${l.livreurId},data-nom=${l.nom},data-livraisons=${l.livraisons},data-ca=${l.chiffreAffaires ?: 0}">
+                        <td>
+                            <span class="avatar-row">
+                                <span class="avatar-initials avatar-initials--sm"
+                                      th:attr="data-avatar-name=${l.nom}"></span>
+                                <span th:text="${l.nom}">Livreur</span>
+                            </span>
+                        </td>
+                        <td class="text-end fw-semibold" th:text="${l.livraisons}">0</td>
+                        <td class="text-end"><span th:text="${l.chiffreAffaires ?: 0}">0</span> <small class="text-muted">Ar</small></td>
+                        <td class="text-end"><span th:text="${l.distanceTotaleKm ?: 0}">0</span> <small class="text-muted">km</small></td>
+                        <td class="text-end">
+                            <span class="status-chip"
+                                  th:classappend="${(l.tauxReussite ?: 0) >= 80 ? 'bg-success' : ((l.tauxReussite ?: 0) >= 50 ? 'bg-warning' : 'bg-danger')}"
+                                  th:text="${l.tauxReussite ?: 0} + ' %'">0 %</span>
+                        </td>
+                    </tr>
+                    <tr th:if="${#lists.isEmpty(statistiques.parLivreur)}">
+                        <td colspan="5">
+                            <div class="app-empty-state">
+                                <i class="bi bi-inbox"></i>
+                                <strong>Aucune livraison sur cette période</strong>
+                                <div class="mt-1">Ajustez les filtres ou élargissez la période.</div>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <script th:src="@{/js/app.js}"></script>
+    <script th:inline="javascript">
+        (function () {
+            if (!window.Chart) { return; }
+
+            var donneesStatut = {
+                livrees: [[${statistiques.nombreLivraisons}]],
+                echecs: [[${statistiques.nombreEchecs}]],
+                annulees: [[${statistiques.nombreAnnulees}]],
+                retournees: [[${statistiques.nombreRetournes}]]
+            };
+
+            var lignes = Array.prototype.slice.call(
+                document.querySelectorAll('#parLivreurTable tbody tr[data-livreur]'));
+            var noms = lignes.map(function (tr) { return tr.getAttribute('data-nom') || '—'; });
+            var livraisons = lignes.map(function (tr) { return Number(tr.getAttribute('data-livraisons')) || 0; });
+            var chiffres = lignes.map(function (tr) { return Number(tr.getAttribute('data-ca')) || 0; });
+
+            var graphiques = [];
+
+            function token(name) {
+                return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+            }
+
+            function withAlpha(hex, alpha) {
+                var h = hex.replace('#', '');
+                if (h.length === 3) {
+                    h = h.charAt(0) + h.charAt(0) + h.charAt(1) + h.charAt(1) + h.charAt(2) + h.charAt(2);
+                }
+                var r = parseInt(h.substring(0, 2), 16);
+                var g = parseInt(h.substring(2, 4), 16);
+                var b = parseInt(h.substring(4, 6), 16);
+                return 'rgba(' + r + ',' + g + ',' + b + ',' + alpha + ')';
+            }
+
+            function detruire() {
+                graphiques.forEach(function (g) { g.destroy(); });
+                graphiques = [];
+            }
+
+            function construire() {
+                var texte = token('--app-text');
+                var muted = token('--app-muted');
+                var bordure = token('--app-border');
+                var surface = token('--app-surface');
+                var primaire = token('--app-primary');
+                var info = token('--app-info');
+                var succes = token('--app-success');
+                var alerte = token('--app-warning');
+                var danger = token('--app-danger');
+
+                Chart.defaults.color = muted;
+                Chart.defaults.borderColor = bordure;
+                Chart.defaults.font.family = token('--app-font') || Chart.defaults.font.family;
+
+                var axeX = { ticks: { color: muted }, grid: { display: false } };
+                var axeY = { beginAtZero: true, ticks: { color: muted, precision: 0 }, grid: { color: bordure } };
+
+                graphiques.push(new Chart(document.getElementById('chartStatut'), {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['Livrées', 'Échecs', 'Annulées', 'Retournées'],
+                        datasets: [{
+                            data: [donneesStatut.livrees, donneesStatut.echecs, donneesStatut.annulees, donneesStatut.retournees],
+                            backgroundColor: [succes, danger, muted, alerte],
+                            borderColor: surface,
+                            borderWidth: 2
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        cutout: '62%',
+                        plugins: {
+                            legend: {
+                                position: 'bottom',
+                                labels: { color: texte, usePointStyle: true, padding: 14, boxWidth: 10 }
+                            }
+                        }
+                    }
+                }));
+
+                graphiques.push(new Chart(document.getElementById('chartLivreurs'), {
+                    type: 'bar',
+                    data: {
+                        labels: noms,
+                        datasets: [{
+                            label: 'Livraisons',
+                            data: livraisons,
+                            backgroundColor: primaire,
+                            borderRadius: 8,
+                            maxBarThickness: 42
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { display: false } },
+                        scales: { x: axeX, y: axeY }
+                    }
+                }));
+
+                graphiques.push(new Chart(document.getElementById('chartCA'), {
+                    type: 'line',
+                    data: {
+                        labels: noms,
+                        datasets: [{
+                            label: "Chiffre d'affaires (Ar)",
+                            data: chiffres,
+                            borderColor: info,
+                            backgroundColor: withAlpha(info, 0.14),
+                            fill: true,
+                            tension: 0.35,
+                            pointRadius: 4,
+                            pointBackgroundColor: info,
+                            borderWidth: 2
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { labels: { color: texte, usePointStyle: true } } },
+                        scales: { x: axeX, y: { beginAtZero: true, ticks: { color: muted }, grid: { color: bordure } } }
+                    }
+                }));
+            }
+
+            detruire();
+            construire();
+
+            var observateur = new MutationObserver(function (mutations) {
+                for (var i = 0; i < mutations.length; i++) {
+                    if (mutations[i].attributeName === 'data-bs-theme') {
+                        detruire();
+                        construire();
+                        return;
+                    }
+                }
+            });
+            observateur.observe(document.documentElement, { attributes: true, attributeFilter: ['data-bs-theme'] });
+        })();
+    </script>
+</body>
+</html>

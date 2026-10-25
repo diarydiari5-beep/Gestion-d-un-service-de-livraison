@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="fr">
+<head th:replace="~{fragments/head :: head('Signaler un incident')}"></head>
+<body class="app-body">
+    <!-- Barre de navigation -->
+    <div th:replace="~{fragments/nav :: nav('incidents')}"></div>
+
+    <main class="app-main">
+    <div class="container-fluid app-page app-page--narrow">
+        <div class="page-header">
+            <div>
+                <h1 class="page-header__title">Signaler un incident</h1>
+                <p class="page-header__subtitle">Décrivez le problème et son contexte</p>
+            </div>
+            <div class="page-header__actions">
+                <a th:href="@{/incidents}" class="btn btn-outline-secondary btn-icon">
+                    <i class="bi bi-arrow-left"></i> Retour
+                </a>
+            </div>
+        </div>
+
+        <div th:if="${errorMessage}" class="alert alert-danger" role="alert">
+            <i class="bi bi-exclamation-triangle me-1"></i><span th:text="${errorMessage}"></span>
+        </div>
+
+        <div class="alert alert-info">
+            <i class="bi bi-info-circle me-1"></i>
+            Rattachez l'incident à une commande : le livreur affecté à cette commande est
+            repris automatiquement. Sans commande, indiquez le livreur concerné.
+        </div>
+
+        <form method="post" th:action="@{/incidents/save}" class="form-sections">
+            <section class="form-section-card">
+                <div class="form-section-card__header">
+                    <i class="bi bi-exclamation-triangle"></i>
+                    <div>
+                        <h3>Incident</h3>
+                        <div class="small text-muted">Nature et description</div>
+                    </div>
+                </div>
+                <div class="form-section-card__body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label" for="type">Type d'incident <span class="text-danger">*</span></label>
+                            <select class="form-select" id="type" name="type" required>
+                                <option value="">-- Choisir --</option>
+                                <option th:each="t : ${types}" th:value="${t.name()}" th:text="${t.name()}"></option>
+                            </select>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label" for="description">Description <span class="text-danger">*</span></label>
+                            <textarea class="form-control" id="description" name="description" rows="4"
+                                      required placeholder="Ce qui s'est passé, constat sur place…"></textarea>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="form-section-card">
+                <div class="form-section-card__header">
+                    <i class="bi bi-diagram-3"></i>
+                    <div>
+                        <h3>Contexte</h3>
+                        <div class="small text-muted">Commande et/ou livreur concernés</div>
+                    </div>
+                </div>
+                <div class="form-section-card__body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label" for="commandeId">Commande concernée</label>
+                            <select class="form-select" id="commandeId" name="commandeId">
+                                <option value="">-- Aucune --</option>
+                                <option th:each="c : ${commandes}" th:value="${c.id}"
+                                        th:text="${c.numero} + ' — ' + ${c.statut}"
+                                        th:selected="${commandeId != null and c.id == commandeId}"></option>
+                            </select>
+                            <div class="form-text"><i class="bi bi-info-circle me-1"></i>Le livreur affecté sera repris automatiquement.</div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label" for="livreurId">Livreur concerné</label>
+                            <input type="number" class="form-control" id="livreurId" name="livreurId"
+                                   placeholder="Laisser vide si la commande est renseignée">
+                            <div class="form-text"><i class="bi bi-info-circle me-1"></i>Identifiant du livreur si aucun colis ne lui est rattaché.</div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <div class="form-sticky-actions">
+                <a th:href="@{/incidents}" class="btn btn-outline-secondary btn-icon">
+                    <i class="bi bi-x-lg"></i> Annuler
+                </a>
+                <button type="submit" class="btn btn-success btn-icon">
+                    <i class="bi bi-send"></i> Signaler
+                </button>
+            </div>
+        </form>
+    </div>
+    </main>
+
+    <script th:src="@{/js/app.js}"></script>
+</body>
+</html>

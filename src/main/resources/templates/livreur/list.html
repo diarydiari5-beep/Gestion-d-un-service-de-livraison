@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="fr">
+<head th:replace="~{fragments/head :: head('Livreurs')}"></head>
+<body class="app-body">
+    <!-- Barre de navigation -->
+    <div th:replace="~{fragments/nav :: nav('livreurs')}"></div>
+
+    <main class="app-main">
+    <div class="container-fluid app-page">
+        <div class="page-header">
+            <div>
+                <h1 class="page-header__title">Livreurs</h1>
+                <p class="page-header__subtitle">Flotte terrain, disponibilité et véhicules</p>
+            </div>
+            <div class="page-header__actions">
+                <a th:href="@{/livreurs/new}" class="btn btn-primary btn-icon">
+                    <i class="bi bi-plus-lg"></i> Nouveau livreur
+                </a>
+            </div>
+        </div>
+
+        <div th:replace="~{fragments/flash :: flash}"></div>
+
+        <div class="filter-bar">
+            <div class="filter-bar__search">
+                <i class="bi bi-search"></i>
+                <input type="search" placeholder="Rechercher un livreur (nom, zone, véhicule…)"
+                       aria-label="Filtrer les livreurs" autocomplete="off"
+                       data-table-filter="#livreursTable">
+            </div>
+            <span class="filter-bar__hint"><i class="bi bi-funnel"></i> Filtrage instantané sur la page</span>
+        </div>
+
+        <div class="app-table-wrap table-responsive">
+            <table class="table table-hover app-table" id="livreursTable">
+                <thead>
+                    <tr>
+                        <th>Livreur</th>
+                        <th>Téléphone</th>
+                        <th>Véhicule</th>
+                        <th>Zone</th>
+                        <th>Statut</th>
+                        <th class="text-end">Capacité max.</th>
+                        <th class="text-end">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="livreur : ${livreurs}" data-filter-row>
+                        <td>
+                            <div class="identity-cell">
+                                <span class="avatar-initials avatar-initials--sm"
+                                      th:attr="data-avatar-name=${livreur.prenom + ' ' + livreur.nom}"></span>
+                                <div class="identity-cell__meta">
+                                    <span class="identity-cell__name"
+                                          th:text="${livreur.prenom + ' ' + livreur.nom}">Livreur</span>
+                                    <span class="identity-cell__sub" th:text="'#' + ${livreur.id}">#0</span>
+                                </div>
+                            </div>
+                        </td>
+                        <td th:text="${#strings.isEmpty(livreur.telephone)} ? '—' : ${livreur.telephone}">—</td>
+                        <td>
+                            <span th:if="${livreur.vehicule != null and !#strings.isEmpty(livreur.vehicule.type)}">
+                                <i class="bi bi-truck me-1 text-muted"></i>
+                                <span th:text="${livreur.vehicule.type}">type</span>
+                                <span class="text-muted small d-block"
+                                      th:if="${!#strings.isEmpty(livreur.vehicule.immatriculation)}"
+                                      th:text="${livreur.vehicule.immatriculation}"></span>
+                            </span>
+                            <span th:if="${livreur.vehicule == null or #strings.isEmpty(livreur.vehicule.type)}"
+                                  class="text-muted">—</span>
+                        </td>
+                        <td class="text-muted"
+                            th:text="${#strings.isEmpty(livreur.zoneActivite)} ? '—' : ${livreur.zoneActivite}">—</td>
+                        <td>
+                            <span class="badge status-chip" th:text="${livreur.statut}"
+                                  th:classappend="${livreur.statut != null and livreur.statut.name() == 'DISPONIBLE'} ? 'bg-success'
+                                                : (${livreur.statut != null and livreur.statut.name() == 'EN_LIVRAISON'} ? 'bg-info'
+                                                : (${livreur.statut != null and livreur.statut.name() == 'INDISPONIBLE'} ? 'bg-danger' : 'bg-warning'))">
+                                Statut
+                            </span>
+                        </td>
+                        <td class="text-end"
+                            th:text="${livreur.capaciteMax != null} ? ${livreur.capaciteMax + ' kg'} : '—'">—</td>
+                        <td class="text-end">
+                            <div class="d-inline-flex gap-1">
+                                <a th:href="@{/livreurs/edit/{id}(id=${livreur.id})}"
+                                   class="btn btn-sm btn-outline-warning btn-action-icon"
+                                   data-bs-toggle="tooltip" title="Modifier">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+                                <form th:action="@{/livreurs/delete/{id}(id=${livreur.id})}" method="post" class="d-inline">
+                                    <button type="submit" class="btn btn-sm btn-outline-danger btn-action-icon"
+                                            data-confirm="Voulez-vous vraiment supprimer ce livreur ?"
+                                            data-bs-toggle="tooltip" title="Supprimer">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr th:if="${#lists.isEmpty(livreurs)}" data-no-filter>
+                        <td colspan="7">
+                            <div class="app-empty-state">
+                                <i class="bi bi-bicycle"></i>
+                                <strong>Aucun livreur enregistré</strong>
+                                <div class="mt-1">Ajoutez un livreur pour constituer votre flotte.</div>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+    </main>
+
+    <script th:src="@{/js/app.js}"></script>
+</body>
+</html>

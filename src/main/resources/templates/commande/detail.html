@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="fr">
+<head th:replace="~{fragments/head :: head('Détail Commande')}"></head>
+<body class="app-body">
+    <!-- Barre de navigation -->
+    <div th:replace="~{fragments/nav :: nav('commandes')}"></div>
+
+    <main class="app-main">
+    <div class="container-fluid app-page">
+        <div class="page-header">
+            <div>
+                <h1 class="page-header__title">Détail de la commande</h1>
+                <p class="page-header__subtitle">Workflow, attribution et historique</p>
+            </div>
+            <div class="page-header__actions">
+                <a th:if="${roleUtilisateur == 'ADMIN' or roleUtilisateur == 'DISPATCHER'}"
+                   th:href="@{/commandes/edit/{id}(id=${commande.id})}" class="btn btn-outline-warning btn-icon">
+                    <i class="bi bi-pencil"></i> Modifier
+                </a>
+                <a th:href="@{/commandes}" class="btn btn-outline-secondary btn-icon">
+                    <i class="bi bi-arrow-left"></i> Retour
+                </a>
+            </div>
+        </div>
+
+        <div th:replace="~{fragments/flash :: flash}"></div>
+
+        <!-- En-tête -->
+        <div class="detail-hero">
+            <div>
+                <div class="text-muted small mb-1">Référence</div>
+                <h2 class="mb-0" th:text="'#' + ${commande.numero}">Commande</h2>
+                <div class="detail-hero__meta">
+                    <span class="badge status-chip" th:text="${commande.statut}"
+                          th:classappend="${commande.statut.name() == 'LIVREE'} ? 'bg-success' : (${commande.statut.name() == 'ANNULEE'} ? 'bg-danger' : 'bg-info')">
+                    </span>
+                    <span class="badge priority-chip" th:text="${commande.priorite}"
+                          th:classappend="${commande.priorite.name() == 'EXPRESS'} ? 'bg-danger' : (${commande.priorite.name() == 'URGENTE'} ? 'bg-warning' : 'bg-secondary')">
+                    </span>
+                    <span class="text-muted small">ID <span th:text="${commande.id}"></span></span>
+                </div>
+                <div class="mt-3 d-flex flex-wrap gap-3 small text-muted">
+                    <span><i class="bi bi-calendar-plus"></i> Créée
+                        <strong class="text-body" th:text="${commande.dateCreation}">—</strong></span>
+                    <span><i class="bi bi-arrow-repeat"></i> MAJ
+                        <strong class="text-body" th:text="${commande.dateMiseAJour}">—</strong></span>
+                    <span><i class="bi bi-calendar-event"></i> Prévue
+                        <strong class="text-body" th:text="${commande.datePrevue}">—</strong></span>
+                </div>
+            </div>
+            <div class="text-md-end">
+                <div class="text-muted small">Montant</div>
+                <div class="detail-hero__amount">
+                    <span th:text="${commande.prix}">0</span> <small>Ar</small>
+                </div>
+            </div>
+        </div>
+
+        <!-- Stepper -->
+        <div class="app-card mb-4">
+            <div class="app-card__header">
+                <h5 class="mb-0"><i class="bi bi-diagram-3 me-2"></i>Progression</h5>
+            </div>
+            <div class="app-card__body">
+                <div class="workflow-stepper"
+                     th:with="s=${commande.statut.name()},
+                              exception=${s == 'ANNULEE' or s == 'ECHEC_LIVRAISON' or s == 'RETOURNEE'},
+                              ord=${s == 'CREEE' ? 1 : (s == 'ASSIGNEE' ? 2 : (s == 'PRISE_EN_CHARGE' ? 3 : (s == 'EN_TRANSIT' ? 4 : (s == 'LIVREE' ? 5 : 0))))}">
+                    <div class="workflow-step"
+                         th:each="etape, i : ${ {'CREEE', 'ASSIGNEE', 'PRISE_EN_CHARGE', 'EN_TRANSIT', 'LIVREE'} }"
+                         th:classappend="${exception} ? (${i.count == 5} ? 'is-exception' : '') : (${ord > i.count or (ord == 5 and i.count == 5)} ? 'is-done' : (${ord == i.count} ? 'is-active' : ''))">
+                        <div class="workflow-step__dot"
+                             th:text="${exception and i.count == 5} ? '!' : ((ord > i.count or (ord == 5 and i.count == 5)) and !exception ? '✓' : ${i.count})">1</div>
+                        <div class="workflow-step__label"
+                             th:classappend="${commande.statut.name() == etape} ? 'fw-bold text-primary' : 'text-muted'"
+                             th:text="${etape}">CREEE</div>
+                    </div>
+                </div>
+                <div th:if="${commande.statut.name() == 'LIVREE' or commande.statut.name() == 'ECHEC_LIVRAISON'
+                              or commande.statut.name() == 'RETOURNEE' or commande.statut.name() == 'ANNULEE'}"
+                     class="alert alert-secondary mt-3 mb-0 py-2"
+                     th:classappend="${commande.statut.name() == 'LIVREE'} ? 'workflow-exception is-success' : 'workflow-exception'">
+                    Parcours terminé — état final :
+                    <span class="fw-bold" th:text="${commande.statut}"></span>
+                </div>
+            </div>
+        </div>
+
+        <div class="row g-4 mb-4">
+            <div class="col-lg-4">
+                <div class="info-tile">
+                    <span class="info-tile__label"><i class="bi bi-person"></i> Client</span>
+                    <div class="avatar-row mb-2">
+                        <span class="avatar-initials"
+                              th:attr="data-avatar-name=${commande.client != null ? commande.client.prenom + ' ' + commande.client.nom : '-'}"></span>
+                        <span class="info-tile__value"
+                              th:text="${commande.client != null} ? ${commande.client.prenom + ' ' + commande.client.nom} : '-'"></span>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-4">
+                <div class="info-tile">
+                    <span class="info-tile__label"><i class="bi bi-geo"></i> Enlèvement</span>
+                    <div class="info-tile__value" th:text="${commande.adresseEnlevement}"></div>
+                </div>
+            </div>
+            <div class="col-lg-4">
+                <div class="info-tile">
+                    <span class="info-tile__label"><i class="bi bi-geo-alt-fill"></i> Livraison</span>
+                    <div class="info-tile__value" th:text="${commande.adresseLivraison}"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row g-4 mb-4">
+            <div class="col-6 col-md-3">
+                <div class="kpi-card">
+                    <span class="kpi-card__label">Poids</span>
+                    <div class="kpi-card__value kpi-card__value--md"><span th:text="${commande.poids}"></span> <small class="text-muted">kg</small></div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="kpi-card">
+                    <span class="kpi-card__label">Volume</span>
+                    <div class="kpi-card__value kpi-card__value--md"><span th:text="${commande.volume}"></span> <small class="text-muted">m³</small></div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="kpi-card">
+                    <span class="kpi-card__label">Distance</span>
+                    <div class="kpi-card__value kpi-card__value--md"><span th:text="${commande.distance}"></span> <small class="text-muted">km</small></div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="kpi-card">
+                    <span class="kpi-card__label">Livreur</span>
+                    <div class="kpi-card__value kpi-card__value--sm"
+                         th:text="${commande.livreur != null} ? ${commande.livreur.prenom + ' ' + commande.livreur.nom} : 'Non attribue'"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Prix -->
+        <div class="app-card mb-4" th:if="${prixCalcule != null}">
+            <div class="app-card__header">
+                <span>Détail du prix (barème <span th:text="${prixCalcule.zone}">TOUTES</span>)</span>
+                <form th:if="${roleUtilisateur == 'ADMIN' or roleUtilisateur == 'DISPATCHER'}"
+                      method="post" th:action="@{/commandes/recalculer-prix/{id}(id=${commande.id})}">
+                    <button type="submit" class="btn btn-sm btn-outline-primary btn-icon">
+                        <i class="bi bi-calculator"></i> Recalculer
+                    </button>
+                </form>
+            </div>
+            <div class="app-card__body">
+                <div class="row text-center g-3">
+                    <div class="col-6 col-md-2">
+                        <div class="text-muted small">Prix fixe</div>
+                        <div th:text="${prixCalcule.prixFixe}">0.00</div>
+                    </div>
+                    <div class="col-6 col-md-2">
+                        <div class="text-muted small">Distance</div>
+                        <div th:text="${prixCalcule.partDistanceKm}">0.00</div>
+                    </div>
+                    <div class="col-6 col-md-2">
+                        <div class="text-muted small">Poids</div>
+                        <div th:text="${prixCalcule.partPoidsKg}">0.00</div>
+                    </div>
+                    <div class="col-6 col-md-2">
+                        <div class="text-muted small">Volume</div>
+                        <div th:text="${prixCalcule.partVolumeM3}">0.00</div>
+                    </div>
+                    <div class="col-6 col-md-2">
+                        <div class="text-muted small">Majoration</div>
+                        <div th:text="${prixCalcule.tauxMajoration + ' %'}">0 %</div>
+                    </div>
+                    <div class="col-6 col-md-2">
+                        <div class="text-muted small">Total barème</div>
+                        <div class="fw-bold" th:text="${prixCalcule.prix + ' Ar'}">0.00 Ar</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Preuve affichage si livrée -->
+        <div class="app-card mb-4" th:if="${commande.statut.name() == 'LIVREE'}">
+            <div class="app-card__header">
+                <h5 class="mb-0"><i class="bi bi-clipboard-check me-2"></i>Preuve de livraison</h5>
+            </div>
+            <div class="app-card__body">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <span class="info-tile__label">Date / heure</span>
+                        <div th:text="${commande.preuveLivraison != null} ? ${commande.preuveLivraison.dateHeure} : '-'"></div>
+                    </div>
+                    <div class="col-md-6">
+                        <span class="info-tile__label">Réceptionnaire</span>
+                        <div th:text="${commande.preuveLivraison != null} ? ${commande.preuveLivraison.nomReceptionnaire} : '-'"></div>
+                    </div>
+                    <div class="col-md-6">
+                        <span class="info-tile__label">Code</span>
+                        <div th:text="${commande.preuveLivraison != null} ? ${commande.preuveLivraison.codeConfirmation} : '-'"></div>
+                    </div>
+                    <div class="col-md-6">
+                        <span class="info-tile__label">Commentaire</span>
+                        <div th:text="${commande.preuveLivraison != null} ? ${commande.preuveLivraison.commentaire} : '-'"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Prochaine action / workflow -->
+        <div class="app-card mb-4 next-action-card">
+            <div class="app-card__header">
+                <h5 class="mb-0"><i class="bi bi-lightning-charge me-2"></i>Prochaine action</h5>
+            </div>
+            <div class="app-card__body">
+                <div class="mb-3" th:if="${commande.statut.name() != 'LIVREE'}">
+                    <label class="form-label">Transitions possibles depuis
+                        <span th:text="${commande.statut}"></span> :
+                    </label>
+                    <div class="d-flex flex-wrap gap-2">
+                        <form th:each="cible : ${transitions}"
+                              th:unless="${cible.name() == 'LIVREE' or cible.name() == 'ASSIGNEE'}"
+                              th:action="@{/commandes/{id}/transition(id=${commande.id})}" method="post">
+                            <input type="hidden" name="statut" th:value="${cible}">
+                            <button type="submit" class="btn btn-outline-primary btn-icon"
+                                    th:text="${cible}"></button>
+                        </form>
+                    </div>
+                </div>
+
+                <form th:if="${#lists.contains(transitions, T(com.livraison.entity.enums.StatutCommande).LIVREE)}"
+                      method="post" th:action="@{/commandes/{id}/transition(id=${commande.id})}"
+                      class="border rounded p-3 bg-body">
+                    <input type="hidden" name="statut" value="LIVREE">
+                    <h6><i class="bi bi-check2-circle text-success me-1"></i>Preuve de livraison (obligatoire)</h6>
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <label for="dateHeure" class="form-label">Date et heure *</label>
+                            <input type="datetime-local" class="form-control" id="dateHeure"
+                                   name="dateHeure" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="nomReceptionnaire" class="form-label">Nom du receptionnaire *</label>
+                            <input type="text" class="form-control" id="nomReceptionnaire"
+                                   name="nomReceptionnaire" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="codeConfirmation" class="form-label">Code de confirmation *</label>
+                            <input type="text" class="form-control" id="codeConfirmation"
+                                   name="codeConfirmation" required>
+                        </div>
+                        <div class="col-md-12">
+                            <label for="commentaire" class="form-label">Commentaire</label>
+                            <textarea class="form-control" id="commentaire" name="commentaire" rows="2"></textarea>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-success btn-icon mt-3">
+                        <i class="bi bi-flag"></i> Cloturer la livraison
+                    </button>
+                </form>
+
+                <div class="alert alert-secondary mb-0" th:if="${#lists.isEmpty(transitions)}">
+                    Cette commande est dans un etat final : aucune transition n'est autorisee.
+                </div>
+            </div>
+        </div>
+
+        <!-- Attribution -->
+        <div class="app-card mb-4" th:if="${commande.statut.name() == 'CREEE' and (roleUtilisateur == 'ADMIN' or roleUtilisateur == 'DISPATCHER')}">
+            <div class="app-card__header">
+                <h5 class="mb-0"><i class="bi bi-person-plus me-2"></i>Attribution</h5>
+            </div>
+            <div class="app-card__body">
+                <button id="btnRechercher" type="button" class="btn btn-success btn-lg w-100 btn-icon">
+                    <i class="bi bi-search"></i> Rechercher livreur
+                </button>
+
+                <form th:action="@{/commandes/affecter-auto/{id}(id=${commande.id})}" method="post" class="mt-2">
+                    <input type="hidden" name="retour" th:value="@{/commandes/detail/{id}(id=${commande.id})}">
+                    <button type="submit" class="btn btn-primary btn-lg w-100 btn-icon">
+                        <i class="bi bi-magic"></i> Affecter automatiquement le meilleur livreur
+                    </button>
+                </form>
+
+                <div id="resultatAttribution" class="mt-3 d-none">
+                    <h5 class="mb-3">Classement des livreurs disponibles</h5>
+                    <div id="aucunLivreur" class="alert alert-warning d-none">
+                        Aucun livreur disponible pour cette commande.
+                    </div>
+                    <div class="table-responsive app-table-wrap">
+                        <table class="table table-sm table-hover app-table mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Livreur</th>
+                                    <th>Zone</th>
+                                    <th>Distance</th>
+                                    <th>Livraisons actives</th>
+                                    <th>Proximite</th>
+                                    <th>Charge</th>
+                                    <th>Capacite</th>
+                                    <th>Score</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody id="classementBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Incidents -->
+        <div class="app-card mb-4">
+            <div class="app-card__header">
+                <h5 class="mb-0"><i class="bi bi-exclamation-triangle me-2"></i>Incidents</h5>
+                <a th:href="@{/incidents/new(commandeId=${commande.id})}" class="btn btn-sm btn-outline-primary btn-icon">
+                    <i class="bi bi-plus-lg"></i> Signaler un incident
+                </a>
+            </div>
+            <div class="app-card__body">
+                <p class="text-muted mb-0" th:if="${#lists.isEmpty(incidents)}">
+                    Aucun incident signale sur cette commande.
+                </p>
+                <div class="table-responsive" th:unless="${#lists.isEmpty(incidents)}">
+                    <table class="table table-sm align-middle mb-0 app-table">
+                        <thead>
+                        <tr>
+                            <th>Signalé le</th>
+                            <th>Type</th>
+                            <th>Description</th>
+                            <th>Statut</th>
+                            <th>Résolution</th>
+                            <th class="text-end"></th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr th:each="incident : ${incidents}">
+                            <td class="text-nowrap" th:text="${incident.dateAffichee}">-</td>
+                            <td th:text="${incident.typeLibelle}">-</td>
+                            <td th:text="${incident.description}">-</td>
+                            <td>
+                                <span class="badge"
+                                      th:classappend="${incident.statut == 'SIGNALEE'} ? 'text-bg-danger'
+                                                    : (${incident.statut == 'EN_TRAITEMENT'} ? 'text-bg-warning'
+                                                    : (${incident.statut == 'RESOLU'} ? 'text-bg-success' : 'text-bg-secondary'))"
+                                      th:text="${incident.statut}">-</span>
+                            </td>
+                            <td class="small">
+                                <span th:if="${incident.resolution != null}"
+                                      th:text="${incident.resolution}">-</span>
+                                <span th:if="${incident.resolution == null}" class="text-muted">-</span>
+                                <div th:if="${incident.transitionProposee != null}" class="mt-1">
+                                    <span class="badge text-bg-dark"
+                                          th:text="'&#8594; ' + ${incident.transitionProposee}"></span>
+                                </div>
+                            </td>
+                            <td class="text-end">
+                                <a th:href="@{/incidents/{id}(id=${incident.id})}"
+                                   class="btn btn-sm btn-outline-primary btn-icon">
+                                    <i class="bi bi-box-arrow-up-right"></i> Ouvrir
+                                </a>
+                            </td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Historique timeline -->
+        <div class="app-card mb-4">
+            <div class="app-card__header">
+                <h5 class="mb-0"><i class="bi bi-clock-history me-2"></i>Historique des statuts</h5>
+                <span class="badge bg-secondary" th:text="${#lists.size(historique)} + ' evenement(s)'">0</span>
+            </div>
+            <div class="app-card__body">
+                <p class="text-muted mb-0" th:if="${#lists.isEmpty(historique)}">
+                    Aucun evenement enregistre pour cette commande.
+                </p>
+                <ul class="app-timeline" th:unless="${#lists.isEmpty(historique)}">
+                    <li class="app-timeline__item" th:each="entree, i : ${historique}">
+                        <div class="app-timeline__meta" th:text="${entree.dateAffichee}">-</div>
+                        <div class="app-timeline__title">
+                            <span class="text-muted small" th:if="${entree.statutPrecedent != null}"
+                                  th:text="${entree.statutPrecedent} + ' &#8594; '">-</span>
+                            <span class="badge text-bg-primary" th:text="${entree.statut}">-</span>
+                        </div>
+                        <div class="small text-muted mt-1">
+                            Origine : <span th:text="${entree.origine}">-</span>
+                            <span th:if="${entree.commentaire != null and !entree.commentaire.isEmpty()}"
+                                  th:text="' - ' + ${entree.commentaire}"></span>
+                        </div>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+    </main>
+
+    <script th:inline="javascript">
+        /*<![CDATA[*/
+        const commandeId = [[${commande.id}]];
+        const btnRechercher = document.getElementById('btnRechercher');
+        const classementBody = document.getElementById('classementBody');
+        const resultatAttribution = document.getElementById('resultatAttribution');
+        const aucunLivreur = document.getElementById('aucunLivreur');
+
+        if (btnRechercher) {
+            btnRechercher.addEventListener('click', function () {
+            this.disabled = true;
+            fetch('/api/commandes/' + commandeId + '/candidats')
+                .then(response => response.json())
+                .then(function (candidats) {
+                    this.disabled = false;
+                    resultatAttribution.classList.remove('d-none');
+                    classementBody.innerHTML = '';
+                    if (candidats.length === 0) {
+                        aucunLivreur.classList.remove('d-none');
+                        return;
+                    }
+                    aucunLivreur.classList.add('d-none');
+                    candidats.forEach(function (c) {
+                        const tr = document.createElement('tr');
+                        const distance = c.distanceKm < 0 ? '-' : c.distanceKm.toFixed(2) + ' km';
+                        tr.innerHTML =
+                            '<td>' + c.prenom + ' ' + c.nom + '</td>' +
+                            '<td>' + (c.zoneActivite || '-') + '</td>' +
+                            '<td>' + distance + '</td>' +
+                            '<td>' + c.commandesActives + '</td>' +
+                            '<td>' + (c.scoreProximite * 100).toFixed(0) + ' %</td>' +
+                            '<td>' + (c.scoreCharge * 100).toFixed(0) + ' %</td>' +
+                            '<td>' + (c.scoreCapacite * 100).toFixed(0) + ' %</td>' +
+                            '<td><strong>' + c.score.toFixed(1) + '</strong></td>' +
+                            '<td><button type="button" class="btn btn-sm btn-primary btn-assigner" data-id="' + c.livreurId + '">Assigner</button></td>';
+                        classementBody.appendChild(tr);
+                    });
+                    classementBody.querySelectorAll('.btn-assigner').forEach(function (btn) {
+                        btn.addEventListener('click', function () {
+                            const livreurId = this.getAttribute('data-id');
+                            this.disabled = true;
+                            fetch('/api/commandes/' + commandeId + '/assigner/' + livreurId, {
+                                method: 'POST'
+                            })
+                                .then(function (response) {
+                                    return response.json().then(function (corps) {
+                                        return {ok: response.ok, corps: corps};
+                                    });
+                                })
+                                .then(function (resultat) {
+                                    if (resultat.ok) {
+                                        window.location.reload();
+                                    } else {
+                                        btn.disabled = false;
+                                        aucunLivreur.textContent = resultat.corps.message || 'Affectation impossible';
+                                        aucunLivreur.classList.remove('d-none');
+                                    }
+                                });
+                        });
+                    });
+                })
+                .catch(function () {
+                    btnRechercher.disabled = false;
+                });
+            });
+        }
+        /*]]>*/
+    </script>
+
+    <script th:src="@{/js/app.js}"></script>
+</body>
+</html>

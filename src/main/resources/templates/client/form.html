@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="fr">
+<head th:replace="~{fragments/head :: head(${client.id != null} ? 'Modifier le client' : 'Nouveau client')}"></head>
+<body class="app-body">
+    <!-- Barre de navigation -->
+    <div th:replace="~{fragments/nav :: nav('clients')}"></div>
+
+    <main class="app-main">
+    <div class="container-fluid app-page app-page--narrow">
+        <div class="page-header">
+            <div>
+                <h1 class="page-header__title"
+                    th:text="${client.id != null} ? 'Modifier le client' : 'Nouveau client'">Client</h1>
+                <p class="page-header__subtitle">Identité et coordonnées</p>
+            </div>
+            <div class="page-header__actions">
+                <a th:href="@{/clients}" class="btn btn-outline-secondary btn-icon">
+                    <i class="bi bi-arrow-left"></i> Retour
+                </a>
+            </div>
+        </div>
+
+        <div th:if="${errorMessage}" class="alert alert-danger" role="alert">
+            <i class="bi bi-exclamation-triangle me-1"></i><span th:text="${errorMessage}"></span>
+        </div>
+
+        <form th:action="@{/clients/save}" th:object="${client}" method="post" class="form-sections">
+            <input type="hidden" th:field="*{id}">
+
+            <section class="form-section-card">
+                <div class="form-section-card__header">
+                    <i class="bi bi-person-badge"></i>
+                    <div>
+                        <h3>Identité</h3>
+                        <div class="small text-muted">Nom et prénom du client</div>
+                    </div>
+                </div>
+                <div class="form-section-card__body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label for="prenom" class="form-label">Prénom <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="prenom" th:field="*{prenom}"
+                                   required placeholder="Ex : Jean">
+                        </div>
+                        <div class="col-md-6">
+                            <label for="nom" class="form-label">Nom <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="nom" th:field="*{nom}"
+                                   required placeholder="Ex : Dupont">
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="form-section-card">
+                <div class="form-section-card__header">
+                    <i class="bi bi-telephone"></i>
+                    <div>
+                        <h3>Coordonnées</h3>
+                        <div class="small text-muted">Contacts et adresse de livraison</div>
+                    </div>
+                </div>
+                <div class="form-section-card__body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label for="telephone" class="form-label">Téléphone</label>
+                            <input type="tel" class="form-control" id="telephone" th:field="*{telephone}"
+                                   placeholder="Ex : 0612345678">
+                        </div>
+                        <div class="col-md-6">
+                            <label for="email" class="form-label">Email</label>
+                            <input type="email" class="form-control" id="email" th:field="*{email}"
+                                   placeholder="Ex : jean.dupont@email.com">
+                            <div class="form-text"><i class="bi bi-info-circle me-1"></i>Doit être unique s'il est renseigné.</div>
+                        </div>
+                        <div class="col-12">
+                            <label for="adresse" class="form-label">Adresse de résidence / livraison</label>
+                            <textarea class="form-control" id="adresse" th:field="*{adresse}" rows="3"
+                                      placeholder="Ex : 12 rue de Paris, 75001 Paris"></textarea>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <div class="form-sticky-actions">
+                <a th:href="@{/clients}" class="btn btn-outline-secondary btn-icon">
+                    <i class="bi bi-x-lg"></i> Annuler
+                </a>
+                <button type="submit" class="btn btn-success btn-icon">
+                    <i class="bi bi-check2-circle"></i> Enregistrer
+                </button>
+            </div>
+        </form>
+    </div>
+    </main>
+
+    <script th:src="@{/js/app.js}"></script>
+</body>
+</html>

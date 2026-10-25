@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="fr">
+<head th:replace="~{fragments/head :: head('Utilisateurs')}"></head>
+<body class="app-body">
+    <!-- Barre de navigation -->
+    <div th:replace="~{fragments/nav :: nav('utilisateurs')}"></div>
+
+    <main class="app-main">
+    <div class="container-fluid app-page">
+        <div class="page-header">
+            <div>
+                <h1 class="page-header__title">Utilisateurs</h1>
+                <p class="page-header__subtitle">Comptes applicatifs et droits d'accès</p>
+            </div>
+            <div class="page-header__actions">
+                <a th:href="@{/utilisateurs/new}" class="btn btn-primary btn-icon">
+                    <i class="bi bi-plus-lg"></i> Nouvel utilisateur
+                </a>
+            </div>
+        </div>
+
+        <div th:replace="~{fragments/flash :: flash}"></div>
+
+        <div class="filter-bar">
+            <div class="filter-bar__search">
+                <i class="bi bi-search"></i>
+                <input type="search" placeholder="Rechercher un utilisateur (identifiant, nom, rôle…)"
+                       aria-label="Filtrer les utilisateurs" autocomplete="off"
+                       data-table-filter="#utilisateursTable">
+            </div>
+            <span class="filter-bar__hint"><i class="bi bi-funnel"></i> Filtrage instantané sur la page</span>
+        </div>
+
+        <div class="app-table-wrap table-responsive">
+            <table class="table table-hover app-table" id="utilisateursTable">
+                <thead>
+                    <tr>
+                        <th>Utilisateur</th>
+                        <th>Rôle</th>
+                        <th>Livreur lié</th>
+                        <th>État</th>
+                        <th class="text-end">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="u : ${utilisateurs}" data-filter-row>
+                        <td>
+                            <div class="identity-cell">
+                                <span class="avatar-initials avatar-initials--sm"
+                                      th:attr="data-avatar-name=${u.nomComplet}"></span>
+                                <div class="identity-cell__meta">
+                                    <span class="identity-cell__name" th:text="${u.nomComplet}">Nom</span>
+                                    <span class="identity-cell__sub" th:text="${u.username}">identifiant</span>
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            <span class="badge status-chip" th:text="${u.role.libelle}"
+                                  th:classappend="${u.role.name() == 'ADMIN'} ? 'bg-danger'
+                                                : (${u.role.name() == 'DISPATCHER'} ? 'bg-info' : 'bg-success')">
+                                Rôle
+                            </span>
+                        </td>
+                        <td>
+                            <span th:if="${u.livreur != null}"
+                                  th:text="${u.livreur.prenom + ' ' + u.livreur.nom}">Livreur</span>
+                            <span th:if="${u.livreur == null}" class="text-muted">—</span>
+                        </td>
+                        <td>
+                            <span class="badge status-chip" th:text="${u.actif} ? 'Actif' : 'Inactif'"
+                                  th:classappend="${u.actif} ? 'bg-success' : 'bg-secondary'">État</span>
+                        </td>
+                        <td class="text-end">
+                            <div class="d-inline-flex gap-1">
+                                <a th:href="@{/utilisateurs/edit/{id}(id=${u.id})}"
+                                   class="btn btn-sm btn-outline-warning btn-action-icon"
+                                   data-bs-toggle="tooltip" title="Modifier">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+                                <form th:action="@{/utilisateurs/delete/{id}(id=${u.id})}" method="post" class="d-inline">
+                                    <button type="submit" class="btn btn-sm btn-outline-danger btn-action-icon"
+                                            data-confirm="Voulez-vous vraiment supprimer cet utilisateur ?"
+                                            data-bs-toggle="tooltip" title="Supprimer">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr th:if="${#lists.isEmpty(utilisateurs)}" data-no-filter>
+                        <td colspan="5">
+                            <div class="app-empty-state">
+                                <i class="bi bi-shield-lock"></i>
+                                <strong>Aucun utilisateur</strong>
+                                <div class="mt-1">Créez un compte pour donner accès à l'application.</div>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+    </main>
+
+    <script th:src="@{/js/app.js}"></script>
+</body>
+</html>

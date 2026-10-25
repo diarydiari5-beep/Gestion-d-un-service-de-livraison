@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="fr">
+<head th:replace="~{fragments/head :: head('Connexion')}"></head>
+<body class="login-page">
+    <div class="toast-container app-toasts position-fixed top-0 end-0 p-3"
+         role="region" aria-live="polite" aria-label="Notifications">
+        <div th:if="${param.error}" class="toast app-toast show" data-app-autotoast role="alert">
+            <div class="d-flex align-items-center">
+                <div class="toast-body d-flex align-items-center gap-2">
+                    <i class="bi bi-exclamation-triangle-fill text-danger"></i>
+                    Identifiant ou mot de passe incorrect.
+                </div>
+                <button type="button" class="btn-close me-2 m-auto" data-bs-dismiss="toast" aria-label="Fermer"></button>
+            </div>
+        </div>
+        <div th:if="${param.logout}" class="toast app-toast show" data-app-autotoast role="status">
+            <div class="d-flex align-items-center">
+                <div class="toast-body d-flex align-items-center gap-2">
+                    <i class="bi bi-box-arrow-right text-primary"></i>
+                    Vous êtes déconnecté.
+                </div>
+                <button type="button" class="btn-close me-2 m-auto" data-bs-dismiss="toast" aria-label="Fermer"></button>
+            </div>
+        </div>
+    </div>
+
+    <div class="login-split">
+        <aside class="login-hero" aria-hidden="false">
+            <div class="login-hero__glow"></div>
+            <div class="login-hero__content">
+                <div class="login-hero__brand">
+                    <span class="login-hero__logo"><i class="bi bi-truck"></i></span>
+                    <div>
+                        <strong>Livraison</strong>
+                        <small>Ops console</small>
+                    </div>
+                </div>
+                <h1 class="login-hero__title">Pilotez vos tournées en un coup d’œil</h1>
+                <p class="login-hero__baseline">
+                    Affectation intelligente, suivi temps réel et incidents — tout le cycle de livraison, clairement.
+                </p>
+                <svg class="login-hero__art" viewBox="0 0 420 280" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                    <rect x="24" y="48" width="240" height="160" rx="24" fill="rgba(255,255,255,0.12)"/>
+                    <rect x="48" y="72" width="120" height="14" rx="7" fill="rgba(255,255,255,0.35)"/>
+                    <rect x="48" y="100" width="180" height="10" rx="5" fill="rgba(255,255,255,0.22)"/>
+                    <rect x="48" y="120" width="160" height="10" rx="5" fill="rgba(255,255,255,0.18)"/>
+                    <circle cx="300" cy="120" r="56" fill="rgba(255,255,255,0.14)"/>
+                    <path d="M272 120h56M300 92v56" stroke="rgba(255,255,255,0.55)" stroke-width="6" stroke-linecap="round"/>
+                    <circle cx="120" cy="210" r="18" fill="#22D3EE"/>
+                    <circle cx="170" cy="210" r="18" fill="#A5B4FC"/>
+                    <circle cx="220" cy="210" r="18" fill="#FBBF24"/>
+                    <path d="M48 248c40-28 80-28 120 0s80 28 120 0 80-28 120 0" stroke="rgba(255,255,255,0.35)" stroke-width="3" stroke-linecap="round"/>
+                </svg>
+            </div>
+        </aside>
+
+        <main class="login-panel">
+            <div class="login-card app-card">
+                <div class="login-card__header">
+                    <h2>Connexion</h2>
+                    <p class="text-muted mb-0">Accédez à votre espace opérationnel</p>
+                </div>
+
+                <form th:action="@{/login}" method="post" id="loginForm" class="login-form" data-no-submit-feedback>
+                    <div class="mb-3">
+                        <label for="username" class="form-label">Identifiant</label>
+                        <div class="input-icon">
+                            <i class="bi bi-person"></i>
+                            <input type="text" id="username" name="username" class="form-control" autofocus required
+                                   autocomplete="username" placeholder="votre.identifiant">
+                        </div>
+                    </div>
+                    <div class="mb-4">
+                        <label for="password" class="form-label">Mot de passe</label>
+                        <div class="input-icon">
+                            <i class="bi bi-lock"></i>
+                            <input type="password" id="password" name="password" class="form-control" required
+                                   autocomplete="current-password" placeholder="••••••••">
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-icon w-100 btn-lg" id="loginSubmit">
+                        <span class="login-btn__idle"><i class="bi bi-box-arrow-in-right"></i> Se connecter</span>
+                        <span class="login-btn__loading d-none">
+                            <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                            Connexion…
+                        </span>
+                    </button>
+                </form>
+            </div>
+            <p class="login-footnote text-muted">Système de Livraison · accès sécurisé</p>
+        </main>
+    </div>
+
+    <script th:src="@{/js/app.js}"></script>
+    <script>
+        (function () {
+            var form = document.getElementById('loginForm');
+            var btn = document.getElementById('loginSubmit');
+            if (!form || !btn) return;
+            form.addEventListener('submit', function () {
+                btn.disabled = true;
+                var idle = btn.querySelector('.login-btn__idle');
+                var loading = btn.querySelector('.login-btn__loading');
+                if (idle) idle.classList.add('d-none');
+                if (loading) loading.classList.remove('d-none');
+            });
+        })();
+    </script>
+</body>
+</html>

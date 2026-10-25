@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<!-- Menu unique, partage par toutes les pages. Le parametre actif met en
+     evidence l'entree correspondante. Les entrees sont filtrees selon le role
+     de l'utilisateur connecte (roleUtilisateur expose par GlobalModelAttributes). -->
+<div th:fragment="nav(actif)" class="app-shell">
+    <div class="app-sidebar-backdrop" data-sidebar-backdrop></div>
+
+    <aside class="app-sidebar" id="appSidebar" aria-label="Navigation principale">
+        <a class="app-sidebar__brand" th:href="@{/commandes}">
+            <span class="app-sidebar__logo" aria-hidden="true"><i class="bi bi-truck"></i></span>
+            <span class="app-sidebar__brand-text">
+                <strong>Livraison</strong>
+                <small>Ops console</small>
+            </span>
+        </a>
+
+        <nav class="app-sidebar__nav">
+            <div class="app-nav-section">
+                <span class="app-nav-section__label">Opérations</span>
+                <a class="app-nav-link" th:classappend="${actif == 'commandes'} ? 'active'"
+                   th:href="@{/commandes}">
+                    <i class="bi bi-box-seam"></i><span>Commandes</span>
+                </a>
+                <a class="app-nav-link" th:classappend="${actif == 'incidents'} ? 'active'"
+                   th:href="@{/incidents}">
+                    <i class="bi bi-exclamation-triangle"></i><span>Incidents</span>
+                </a>
+                <a class="app-nav-link" th:classappend="${actif == 'suivi'} ? 'active'"
+                   th:href="@{/tableau-bord}">
+                    <i class="bi bi-speedometer2"></i><span>Suivi</span>
+                </a>
+                <a class="app-nav-link" th:classappend="${actif == 'carte'} ? 'active'"
+                   th:href="@{/suivi}">
+                    <i class="bi bi-geo-alt"></i><span>Carte</span>
+                </a>
+            </div>
+
+            <div class="app-nav-section" th:if="${roleUtilisateur == 'ADMIN' or roleUtilisateur == 'DISPATCHER'}">
+                <span class="app-nav-section__label">Logistique</span>
+                <a class="app-nav-link" th:classappend="${actif == 'clients'} ? 'active'"
+                   th:href="@{/clients}">
+                    <i class="bi bi-people"></i><span>Clients</span>
+                </a>
+                <a class="app-nav-link" th:classappend="${actif == 'livreurs'} ? 'active'"
+                   th:href="@{/livreurs}">
+                    <i class="bi bi-bicycle"></i><span>Livreurs</span>
+                </a>
+                <a class="app-nav-link" th:classappend="${actif == 'colis'} ? 'active'"
+                   th:href="@{/colis}">
+                    <i class="bi bi-box2"></i><span>Colis</span>
+                </a>
+            </div>
+
+            <div class="app-nav-section"
+                 th:if="${roleUtilisateur == 'ADMIN' or roleUtilisateur == 'DISPATCHER'}">
+                <span class="app-nav-section__label">Pilotage</span>
+                <a class="app-nav-link" th:classappend="${actif == 'statistiques'} ? 'active'"
+                   th:href="@{/statistiques}">
+                    <i class="bi bi-bar-chart-line"></i><span>Statistiques</span>
+                </a>
+                <a class="app-nav-link" th:if="${roleUtilisateur == 'ADMIN'}"
+                   th:classappend="${actif == 'tarifs'} ? 'active'"
+                   th:href="@{/tarifs}">
+                    <i class="bi bi-currency-exchange"></i><span>Barèmes</span>
+                </a>
+            </div>
+
+            <div class="app-nav-section" th:if="${roleUtilisateur == 'ADMIN'}">
+                <span class="app-nav-section__label">Administration</span>
+                <a class="app-nav-link" th:classappend="${actif == 'utilisateurs'} ? 'active'"
+                   th:href="@{/utilisateurs}">
+                    <i class="bi bi-shield-lock"></i><span>Utilisateurs</span>
+                </a>
+            </div>
+        </nav>
+    </aside>
+
+    <header class="app-topbar">
+        <div class="app-topbar__left">
+            <button type="button" class="btn-icon-only" data-sidebar-toggle
+                    aria-controls="appSidebar" aria-expanded="true" title="Menu"
+                    data-bs-toggle="tooltip" data-bs-placement="bottom">
+                <i class="bi bi-list"></i>
+            </button>
+            <nav class="app-breadcrumb" aria-label="Fil d'Ariane">
+                <i class="bi bi-house-door" aria-hidden="true"></i>
+                <span aria-hidden="true">/</span>
+                <span class="app-breadcrumb__current"
+                      th:text="${actif == 'commandes'} ? 'Commandes' :
+                               (${actif == 'clients'} ? 'Clients' :
+                               (${actif == 'incidents'} ? 'Incidents' :
+                               (${actif == 'tarifs'} ? 'Barèmes' :
+                               (${actif == 'statistiques'} ? 'Statistiques' :
+                               (${actif == 'livreurs'} ? 'Livreurs' :
+                               (${actif == 'colis'} ? 'Colis' :
+                               (${actif == 'suivi'} ? 'Suivi' :
+                               (${actif == 'carte'} ? 'Carte' :
+                               (${actif == 'utilisateurs'} ? 'Utilisateurs' : 'Accueil')))))))))">
+                    Accueil
+                </span>
+            </nav>
+        </div>
+
+        <div class="app-topbar__right">
+            <div class="app-search d-none d-lg-block">
+                <i class="bi bi-search"></i>
+                <input type="search" id="appTopSearch" placeholder="Rechercher…"
+                       aria-label="Rechercher dans la page" autocomplete="off">
+            </div>
+
+            <button type="button" class="btn-icon-only" data-theme-toggle
+                    title="Thème" aria-label="Basculer le thème"
+                    data-bs-toggle="tooltip" data-bs-placement="bottom">
+                <i class="bi bi-moon-stars"></i>
+            </button>
+
+            <div class="dropdown">
+                <a class="user-menu-toggle dropdown-toggle" href="#" role="button"
+                   data-bs-toggle="dropdown" aria-expanded="false" id="userMenuToggle">
+                    <span class="avatar-initials avatar-initials--sm"
+                          th:attr="data-avatar-name=${utilisateurNom ?: 'Utilisateur'}"></span>
+                    <span class="user-meta d-none d-md-flex">
+                        <strong th:text="${utilisateurNom} ?: 'Utilisateur'">Utilisateur</strong>
+                        <span class="role-badge" th:if="${roleUtilisateur}" th:text="${roleUtilisateur}">ROLE</span>
+                    </span>
+                </a>
+                <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userMenuToggle">
+                    <li class="px-3 py-2 d-md-none">
+                        <div class="fw-semibold" th:text="${utilisateurNom} ?: 'Utilisateur'">Utilisateur</div>
+                        <span class="role-badge" th:if="${roleUtilisateur}" th:text="${roleUtilisateur}">ROLE</span>
+                    </li>
+                    <li><hr class="dropdown-divider d-md-none"></li>
+                    <li>
+                        <form th:action="@{/logout}" method="post">
+                            <button type="submit" class="dropdown-item">
+                                <i class="bi bi-box-arrow-right me-2"></i>Déconnexion
+                            </button>
+                        </form>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </header>
+</div>
+</body>
+</html>

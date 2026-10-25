@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="fr">
+<head th:replace="~{fragments/head :: head(${colis.id != null} ? 'Modifier le colis' : 'Nouveau colis')}"></head>
+<body class="app-body">
+    <!-- Barre de navigation -->
+    <div th:replace="~{fragments/nav :: nav('colis')}"></div>
+
+    <main class="app-main">
+    <div class="container-fluid app-page app-page--narrow">
+        <div class="page-header">
+            <div>
+                <h1 class="page-header__title"
+                    th:text="${colis.id != null} ? 'Modifier le colis' : 'Nouveau colis'">Colis</h1>
+                <p class="page-header__subtitle">Description et caractéristiques</p>
+            </div>
+            <div class="page-header__actions">
+                <a th:href="@{/colis}" class="btn btn-outline-secondary btn-icon">
+                    <i class="bi bi-arrow-left"></i> Retour
+                </a>
+            </div>
+        </div>
+
+        <div th:if="${errorMessage}" class="alert alert-danger" role="alert">
+            <i class="bi bi-exclamation-triangle me-1"></i><span th:text="${errorMessage}"></span>
+        </div>
+
+        <form th:action="@{/colis/save}" th:object="${colis}" method="post" class="form-sections">
+            <input type="hidden" th:field="*{id}">
+
+            <section class="form-section-card">
+                <div class="form-section-card__header">
+                    <i class="bi bi-box-seam"></i>
+                    <div>
+                        <h3>Colis</h3>
+                        <div class="small text-muted">Commande et description</div>
+                    </div>
+                </div>
+                <div class="form-section-card__body">
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <label for="commande" class="form-label">Commande <span class="text-danger">*</span></label>
+                            <select class="form-select" id="commande" th:field="*{commande}" required>
+                                <option value="">-- Sélectionner une commande --</option>
+                                <option th:each="c : ${commandes}" th:value="${c.id}"
+                                        th:text="${c.numero != null} ? ${c.numero + ' — ' + c.statut} : ${'Commande #' + c.id}"></option>
+                            </select>
+                        </div>
+                        <div class="col-12">
+                            <label for="description" class="form-label">Description <span class="text-danger">*</span></label>
+                            <textarea class="form-control" id="description" rows="3"
+                                      th:field="*{description}" required
+                                      placeholder="Nature du contenu, remarques de manutention…"></textarea>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="form-section-card">
+                <div class="form-section-card__header">
+                    <i class="bi bi-rulers"></i>
+                    <div>
+                        <h3>Mesures &amp; manutention</h3>
+                        <div class="small text-muted">Poids, volume et fragilité</div>
+                    </div>
+                </div>
+                <div class="form-section-card__body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label for="poids" class="form-label">Poids (kg)</label>
+                            <div class="input-group">
+                                <input type="number" min="0" step="0.01" class="form-control"
+                                       id="poids" th:field="*{poids}">
+                                <span class="input-group-text">kg</span>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="volume" class="form-label">Volume (m³)</label>
+                            <div class="input-group">
+                                <input type="number" min="0" step="0.01" class="form-control"
+                                       id="volume" th:field="*{volume}">
+                                <span class="input-group-text">m³</span>
+                            </div>
+                        </div>
+                        <div class="col-12">
+                            <div class="form-check">
+                                <input type="checkbox" class="form-check-input" id="fragile" th:field="*{fragile}">
+                                <label class="form-check-label" for="fragile">
+                                    Colis fragile <span class="text-muted small">— manutention prudente requise</span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <div class="form-sticky-actions">
+                <a th:href="@{/colis}" class="btn btn-outline-secondary btn-icon">
+                    <i class="bi bi-x-lg"></i> Annuler
+                </a>
+                <button type="submit" class="btn btn-success btn-icon">
+                    <i class="bi bi-check2-circle"></i> Enregistrer
+                </button>
+            </div>
+        </form>
+    </div>
+    </main>
+
+    <script th:src="@{/js/app.js}"></script>
+</body>
+</html>

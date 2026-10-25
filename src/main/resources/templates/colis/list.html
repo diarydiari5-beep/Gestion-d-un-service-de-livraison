@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="fr">
+<head th:replace="~{fragments/head :: head('Colis')}"></head>
+<body class="app-body">
+    <!-- Barre de navigation -->
+    <div th:replace="~{fragments/nav :: nav('colis')}"></div>
+
+    <main class="app-main">
+    <div class="container-fluid app-page">
+        <div class="page-header">
+            <div>
+                <h1 class="page-header__title">Colis</h1>
+                <p class="page-header__subtitle">Contenu rattaché aux commandes</p>
+            </div>
+            <div class="page-header__actions">
+                <a th:href="@{/colis/new}" class="btn btn-primary btn-icon">
+                    <i class="bi bi-plus-lg"></i> Nouveau colis
+                </a>
+            </div>
+        </div>
+
+        <div th:replace="~{fragments/flash :: flash}"></div>
+
+        <div class="filter-bar">
+            <div class="filter-bar__search">
+                <i class="bi bi-search"></i>
+                <input type="search" placeholder="Rechercher un colis (description, commande…)"
+                       aria-label="Filtrer les colis" autocomplete="off"
+                       data-table-filter="#colisTable">
+            </div>
+            <span class="filter-bar__hint"><i class="bi bi-funnel"></i> Filtrage instantané sur la page</span>
+        </div>
+
+        <div class="app-table-wrap table-responsive">
+            <table class="table table-hover app-table" id="colisTable">
+                <thead>
+                    <tr>
+                        <th>Description</th>
+                        <th>Commande</th>
+                        <th class="text-end">Poids</th>
+                        <th class="text-end">Volume</th>
+                        <th>Nature</th>
+                        <th class="text-end">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="colis : ${colis}" data-filter-row>
+                        <td>
+                            <div class="identity-cell">
+                                <span class="avatar-initials avatar-initials--sm"
+                                      th:attr="data-avatar-name=${colis.description}"></span>
+                                <div class="identity-cell__meta">
+                                    <span class="identity-cell__name" th:text="${colis.description}">Colis</span>
+                                    <span class="identity-cell__sub" th:text="'#' + ${colis.id}">#0</span>
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            <a th:if="${colis.commande != null}"
+                               th:href="@{/commandes/detail/{id}(id=${colis.commande.id})}"
+                               th:text="${colis.commande.numero != null} ? ${colis.commande.numero} : ${'Commande #' + colis.commande.id}">—</a>
+                            <span th:if="${colis.commande == null}" class="text-muted">—</span>
+                        </td>
+                        <td class="text-end" th:text="${colis.poids != null} ? ${colis.poids + ' kg'} : '—'">—</td>
+                        <td class="text-end" th:text="${colis.volume != null} ? ${colis.volume + ' m³'} : '—'">—</td>
+                        <td>
+                            <span th:if="${colis.fragile}" class="fragile-flag">
+                                <i class="bi bi-exclamation-triangle-fill"></i> Fragile
+                            </span>
+                            <span th:unless="${colis.fragile}" class="text-muted">Standard</span>
+                        </td>
+                        <td class="text-end">
+                            <div class="d-inline-flex gap-1">
+                                <a th:href="@{/colis/edit/{id}(id=${colis.id})}"
+                                   class="btn btn-sm btn-outline-warning btn-action-icon"
+                                   data-bs-toggle="tooltip" title="Modifier">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+                                <form th:action="@{/colis/delete/{id}(id=${colis.id})}" method="post" class="d-inline">
+                                    <button type="submit" class="btn btn-sm btn-outline-danger btn-action-icon"
+                                            data-confirm="Voulez-vous vraiment supprimer ce colis ?"
+                                            data-bs-toggle="tooltip" title="Supprimer">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr th:if="${#lists.isEmpty(colis)}" data-no-filter>
+                        <td colspan="6">
+                            <div class="app-empty-state">
+                                <i class="bi bi-box2"></i>
+                                <strong>Aucun colis enregistré</strong>
+                                <div class="mt-1">Rattachez un colis à une commande existante.</div>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+    </main>
+
+    <script th:src="@{/js/app.js}"></script>
+</body>
+</html>

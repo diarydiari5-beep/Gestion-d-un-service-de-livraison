@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="fr">
+<head th:replace="~{fragments/head :: head('Liste des Commandes')}"></head>
+<body class="app-body">
+    <!-- Barre de navigation -->
+    <div th:replace="~{fragments/nav :: nav('commandes')}"></div>
+
+    <main class="app-main">
+    <div class="container-fluid app-page">
+        <div class="page-header">
+            <div>
+                <h1 class="page-header__title">Liste des Commandes</h1>
+                <p class="page-header__subtitle">Suivi, affectation et priorisation des livraisons</p>
+            </div>
+            <div class="page-header__actions">
+                <a th:if="${roleUtilisateur == 'ADMIN' or roleUtilisateur == 'DISPATCHER'}"
+                   th:href="@{/commandes/new}" class="btn btn-primary btn-icon">
+                    <i class="bi bi-plus-lg"></i> Nouvelle Commande
+                </a>
+            </div>
+        </div>
+
+        <div class="segment-pills" role="tablist" aria-label="Filtres commandes">
+            <a class="segment-pill" th:classappend="${onglet == 'toutes'} ? 'active'"
+               th:href="@{/commandes(onglet='toutes')}">
+                <i class="bi bi-list-ul"></i>
+                Toutes <span class="badge bg-secondary" th:text="${totalToutes}">0</span>
+            </a>
+            <a class="segment-pill" th:classappend="${onglet == 'attente'} ? 'active'"
+               th:href="@{/commandes(onglet='attente')}">
+                <i class="bi bi-hourglass-split"></i>
+                En attente <span class="badge bg-secondary" th:text="${totalAttente}">0</span>
+            </a>
+            <a class="segment-pill" th:if="${roleUtilisateur == 'ADMIN' or roleUtilisateur == 'DISPATCHER'}"
+               th:classappend="${onglet == 'affecter'} ? 'active'"
+               th:href="@{/commandes(onglet='affecter')}">
+                <i class="bi bi-person-check"></i>
+                À affecter <span class="badge bg-secondary" th:text="${totalAffecter}">0</span>
+            </a>
+        </div>
+
+        <div class="filter-bar">
+            <div class="filter-bar__search">
+                <i class="bi bi-search"></i>
+                <input type="search" id="commandeSearch" placeholder="Rechercher n°, client, adresse, statut…"
+                       aria-label="Filtrer les commandes" autocomplete="off">
+            </div>
+            <span class="filter-bar__hint"><i class="bi bi-funnel"></i> Filtrage instantané sur la page</span>
+        </div>
+
+        <div th:replace="~{fragments/flash :: flash}"></div>
+
+        <div class="app-table-wrap table-responsive">
+            <table class="table table-hover app-table" id="commandesTable">
+                <thead>
+                    <tr>
+                        <th>N°</th>
+                        <th>Client</th>
+                        <th>Trajet</th>
+                        <th>Statut</th>
+                        <th>Priorité</th>
+                        <th>Prix</th>
+                        <th>Livreur</th>
+                        <th>Date prévue</th>
+                        <th class="text-end">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="cmd : ${commandes}" class="commande-row" data-filter-row>
+                        <td>
+                            <a class="fw-semibold text-decoration-none"
+                               th:href="@{/commandes/detail/{id}(id=${cmd.id})}"
+                               th:text="${cmd.numero}"></a>
+                        </td>
+                        <td>
+                            <span class="avatar-row">
+                                <span class="avatar-initials avatar-initials--sm"
+                                      th:attr="data-avatar-name=${cmd.client != null ? cmd.client.prenom + ' ' + cmd.client.nom : '-'}"></span>
+                                <span th:text="${cmd.client != null} ? ${cmd.client.prenom + ' ' + cmd.client.nom} : '-'"></span>
+                            </span>
+                        </td>
+                        <td>
+                            <div class="trajet-cell">
+                                <div class="trajet-cell__from">
+                                    <i class="bi bi-geo"></i>
+                                    <span th:text="${cmd.adresseEnlevement} ?: '—'">—</span>
+                                </div>
+                                <div class="trajet-cell__to">
+                                    <i class="bi bi-geo-alt-fill"></i>
+                                    <span th:text="${cmd.adresseLivraison}">—</span>
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            <span class="badge status-chip" th:text="${cmd.statut}"
+                                  th:classappend="${cmd.statut.name() == 'LIVREE'} ? 'bg-success' : (${cmd.statut.name() == 'ANNULEE'} ? 'bg-danger' : 'bg-info')">
+                            </span>
+                        </td>
+                        <td>
+                            <span class="badge priority-chip" th:text="${cmd.priorite}"
+                                  th:classappend="${cmd.priorite.name() == 'EXPRESS'} ? 'bg-danger' : (${cmd.priorite.name() == 'URGENTE'} ? 'bg-warning' : 'bg-secondary')">
+                            </span>
+                        </td>
+                        <td>
+                            <span class="fw-semibold" th:text="${cmd.prix}"></span>
+                            <span class="text-muted">Ar</span>
+                        </td>
+                        <td>
+                            <span class="avatar-row" th:if="${cmd.livreur != null}">
+                                <span class="avatar-initials avatar-initials--sm"
+                                      th:attr="data-avatar-name=${cmd.livreur.prenom + ' ' + cmd.livreur.nom}"></span>
+                                <span th:text="${cmd.livreur.prenom + ' ' + cmd.livreur.nom}">Livreur</span>
+                            </span>
+                            <span class="text-muted" th:if="${cmd.livreur == null}">Non attribué</span>
+                        </td>
+                        <td th:text="${cmd.datePrevue}"></td>
+                        <td class="text-end">
+                            <div class="d-inline-flex gap-1">
+                                <a th:href="@{/commandes/detail/{id}(id=${cmd.id})}"
+                                   class="btn btn-sm btn-outline-primary btn-action-icon"
+                                   data-bs-toggle="tooltip" title="Détail">
+                                    <i class="bi bi-eye"></i>
+                                </a>
+                                <a th:if="${roleUtilisateur == 'ADMIN' or roleUtilisateur == 'DISPATCHER'}"
+                                   th:href="@{/commandes/edit/{id}(id=${cmd.id})}"
+                                   class="btn btn-sm btn-outline-warning btn-action-icon"
+                                   data-bs-toggle="tooltip" title="Modifier">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+                                <a th:if="${roleUtilisateur == 'ADMIN' or roleUtilisateur == 'DISPATCHER'}"
+                                   th:href="@{/commandes/delete/{id}(id=${cmd.id})}"
+                                   class="btn btn-sm btn-outline-danger btn-action-icon"
+                                   onclick="return confirm('Voulez-vous vraiment supprimer cette commande ?')"
+                                   data-bs-toggle="tooltip" title="Supprimer">
+                                    <i class="bi bi-trash"></i>
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr th:if="${onglet == 'affecter'}" th:each="cmd : ${commandes}" class="table-light" data-no-filter>
+                        <td colspan="9">
+                            <div class="affectation-panel">
+                                <div class="affectation-panel__title">
+                                    <i class="bi bi-person-gear text-success"></i>
+                                    Affectation —
+                                    <span th:text="${cmd.numero}">CMD</span>
+                                </div>
+                                <form th:if="${roleUtilisateur == 'ADMIN' or roleUtilisateur == 'DISPATCHER'}"
+                                      th:action="@{/commandes/affecter-auto/{id}(id=${cmd.id})}" method="post" class="mb-3">
+                                    <button type="submit" class="btn btn-sm btn-outline-success btn-icon">
+                                        <i class="bi bi-magic"></i>
+                                        Affecter automatiquement le meilleur livreur
+                                    </button>
+                                </form>
+                                <details class="app-details" open>
+                                    <summary>Classement des livreurs disponibles</summary>
+                                    <div class="table-responsive mt-2">
+                                        <table class="table table-sm mb-0">
+                                            <thead>
+                                                <tr>
+                                                    <th>Livreur</th>
+                                                    <th>Zone</th>
+                                                    <th class="text-end">Score</th>
+                                                    <th class="text-end">Distance</th>
+                                                    <th></th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <tr th:each="cand : ${candidatsParCommande[cmd.id]}">
+                                                    <td>
+                                                        <span class="avatar-row">
+                                                            <span class="avatar-initials avatar-initials--sm"
+                                                                  th:attr="data-avatar-name=${cand.prenom + ' ' + cand.nom}"></span>
+                                                            <span th:text="${cand.prenom + ' ' + cand.nom}">Livreur</span>
+                                                        </span>
+                                                    </td>
+                                                    <td th:text="${cand.zoneActivite}">zone</td>
+                                                    <td class="text-end fw-semibold" th:text="${#numbers.formatDecimal(cand.score, 1, 2)}">0</td>
+                                                    <td class="text-end"
+                                                        th:text="${cand.distanceKm >= 0 ? #numbers.formatDecimal(cand.distanceKm, 1, 2) + ' km' : 'n/a'}">n/a</td>
+                                                    <td class="text-end">
+                                                        <form th:action="@{/commandes/affecter/{id}(id=${cmd.id})}" method="post">
+                                                            <input type="hidden" name="livreurId" th:value="${cand.livreurId}">
+                                                            <button type="submit" class="btn btn-sm btn-success btn-icon">
+                                                                <i class="bi bi-check2-circle"></i> Affecter
+                                                            </button>
+                                                        </form>
+                                                    </td>
+                                                </tr>
+                                                <tr th:if="${#lists.isEmpty(candidatsParCommande[cmd.id])}">
+                                                    <td colspan="5" class="text-muted">Aucun livreur éligible.</td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </details>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr th:if="${#lists.isEmpty(commandes)}" data-no-filter>
+                        <td colspan="9">
+                            <div class="app-empty-state">
+                                <i class="bi bi-inbox"></i>
+                                <strong>Aucune commande trouvée</strong>
+                                <div class="mt-1">Modifiez l’onglet ou créez une nouvelle commande.</div>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+    </main>
+
+    <script th:src="@{/js/app.js}"></script>
+    <script>
+        (function () {
+            var input = document.getElementById('commandeSearch');
+            var table = document.getElementById('commandesTable');
+            if (!input || !table) return;
+            input.addEventListener('input', function () {
+                var q = (input.value || '').trim().toLowerCase();
+                table.querySelectorAll('tbody tr.commande-row').forEach(function (row) {
+                    row.style.display = !q || row.textContent.toLowerCase().indexOf(q) !== -1 ? '' : 'none';
+                });
+            });
+        })();
+    </script>
+</body>
+</html>

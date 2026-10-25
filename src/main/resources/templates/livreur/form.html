@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="fr">
+<head th:replace="~{fragments/head :: head(${livreur.id != null} ? 'Modifier le livreur' : 'Nouveau livreur')}"></head>
+<body class="app-body">
+    <!-- Barre de navigation -->
+    <div th:replace="~{fragments/nav :: nav('livreurs')}"></div>
+
+    <main class="app-main">
+    <div class="container-fluid app-page app-page--narrow">
+        <div class="page-header">
+            <div>
+                <h1 class="page-header__title"
+                    th:text="${livreur.id != null} ? 'Modifier le livreur' : 'Nouveau livreur'">Livreur</h1>
+                <p class="page-header__subtitle">Profil, disponibilité et véhicule</p>
+            </div>
+            <div class="page-header__actions">
+                <a th:href="@{/livreurs}" class="btn btn-outline-secondary btn-icon">
+                    <i class="bi bi-arrow-left"></i> Retour
+                </a>
+            </div>
+        </div>
+
+        <div th:if="${errorMessage}" class="alert alert-danger" role="alert">
+            <i class="bi bi-exclamation-triangle me-1"></i><span th:text="${errorMessage}"></span>
+        </div>
+
+        <form th:action="@{/livreurs/save}" th:object="${livreur}" method="post" class="form-sections">
+            <input type="hidden" th:field="*{id}">
+
+            <section class="form-section-card">
+                <div class="form-section-card__header">
+                    <i class="bi bi-person-badge"></i>
+                    <div>
+                        <h3>Identité</h3>
+                        <div class="small text-muted">Nom, prénom et contact</div>
+                    </div>
+                </div>
+                <div class="form-section-card__body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label for="prenom" class="form-label">Prénom <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="prenom" th:field="*{prenom}" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="nom" class="form-label">Nom <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="nom" th:field="*{nom}" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="telephone" class="form-label">Téléphone</label>
+                            <input type="tel" class="form-control" id="telephone" th:field="*{telephone}">
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="form-section-card">
+                <div class="form-section-card__header">
+                    <i class="bi bi-geo-alt"></i>
+                    <div>
+                        <h3>Affectation</h3>
+                        <div class="small text-muted">Zone d'activité, statut et capacité</div>
+                    </div>
+                </div>
+                <div class="form-section-card__body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label for="zoneActivite" class="form-label">Zone d'activité</label>
+                            <input type="text" class="form-control" id="zoneActivite" th:field="*{zoneActivite}">
+                        </div>
+                        <div class="col-md-6">
+                            <label for="statut" class="form-label">Statut <span class="text-danger">*</span></label>
+                            <select class="form-select" id="statut" th:field="*{statut}" required>
+                                <option th:each="s : ${statuts}" th:value="${s}" th:text="${s}"></option>
+                            </select>
+                            <div class="form-text"><i class="bi bi-info-circle me-1"></i>DISPONIBLE, EN_LIVRAISON, INDISPONIBLE ou PAUSE.</div>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="capaciteMax" class="form-label">Capacité maximale (kg)</label>
+                            <div class="input-group">
+                                <input type="number" min="0" step="0.01" class="form-control"
+                                       id="capaciteMax" th:field="*{capaciteMax}">
+                                <span class="input-group-text">kg</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="form-section-card">
+                <div class="form-section-card__header">
+                    <i class="bi bi-truck"></i>
+                    <div>
+                        <h3>Véhicule</h3>
+                        <div class="small text-muted">Moyen de locomotion attribué</div>
+                    </div>
+                </div>
+                <div class="form-section-card__body">
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <label for="vehiculeType" class="form-label">Type</label>
+                            <input type="text" class="form-control" id="vehiculeType"
+                                   th:field="*{vehicule.type}" placeholder="Ex : Scooter">
+                        </div>
+                        <div class="col-md-4">
+                            <label for="immatriculation" class="form-label">Immatriculation</label>
+                            <input type="text" class="form-control" id="immatriculation"
+                                   th:field="*{vehicule.immatriculation}">
+                        </div>
+                        <div class="col-md-4">
+                            <label for="vehiculeCapacite" class="form-label">Capacité véhicule (kg)</label>
+                            <div class="input-group">
+                                <input type="number" min="0" step="0.01" class="form-control"
+                                       id="vehiculeCapacite" th:field="*{vehicule.capacite}">
+                                <span class="input-group-text">kg</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <div class="form-sticky-actions">
+                <a th:href="@{/livreurs}" class="btn btn-outline-secondary btn-icon">
+                    <i class="bi bi-x-lg"></i> Annuler
+                </a>
+                <button type="submit" class="btn btn-success btn-icon">
+                    <i class="bi bi-check2-circle"></i> Enregistrer
+                </button>
+            </div>
+        </form>
+    </div>
+    </main>
+
+    <script th:src="@{/js/app.js}"></script>
+</body>
+</html>

@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="fr">
+<head th:replace="~{fragments/head :: head('Détail de l’incident')}"></head>
+<body class="app-body">
+    <!-- Barre de navigation -->
+    <div th:replace="~{fragments/nav :: nav('incidents')}"></div>
+
+    <main class="app-main">
+    <div class="container-fluid app-page">
+        <div class="page-header">
+            <div>
+                <h1 class="page-header__title">
+                    Incident <span class="text-muted" th:text="'#' + ${incident.id}">#0</span>
+                </h1>
+                <p class="page-header__subtitle">Signalement, traitement et résolution</p>
+            </div>
+            <div class="page-header__actions">
+                <a th:href="@{/incidents}" class="btn btn-outline-secondary btn-icon">
+                    <i class="bi bi-arrow-left"></i> Retour à la liste
+                </a>
+            </div>
+        </div>
+
+        <div th:replace="~{fragments/flash :: flash}"></div>
+
+        <!-- En-tête -->
+        <div class="detail-hero">
+            <div>
+                <div class="text-muted small mb-1">Incident</div>
+                <h2 class="mb-0" th:text="'#' + ${incident.id}">#0</h2>
+                <div class="detail-hero__meta">
+                    <span class="type-chip"><i class="bi bi-tag"></i>
+                        <span th:text="${incident.typeLibelle} ?: ${incident.type}">Type</span>
+                    </span>
+                    <span class="badge status-chip" th:text="${incident.statutLibelle} ?: ${incident.statut}"
+                          th:classappend="${incident.statut == 'SIGNALEE'} ? 'bg-danger'
+                                        : (${incident.statut == 'EN_TRAITEMENT'} ? 'bg-warning'
+                                        : (${incident.statut == 'RESOLU'} ? 'bg-success' : 'bg-secondary'))">
+                        Statut
+                    </span>
+                </div>
+                <div class="mt-3 d-flex flex-wrap gap-3 small text-muted">
+                    <span><i class="bi bi-clock"></i> Signalé le
+                        <strong class="text-body" th:text="${incident.dateAffichee}">—</strong></span>
+                    <span th:if="${incident.dateResolutionAffichee != null}">
+                        <i class="bi bi-check2-circle"></i> Clôturé le
+                        <strong class="text-body" th:text="${incident.dateResolutionAffichee}">—</strong></span>
+                </div>
+            </div>
+            <div class="text-md-end">
+                <div class="text-muted small">Commande</div>
+                <div class="fs-5 fw-semibold">
+                    <a th:if="${incident.commandeId != null}"
+                       th:href="@{/commandes/detail/{id}(id=${incident.commandeId})}"
+                       th:text="${incident.commandeNumero}">—</a>
+                    <span th:if="${incident.commandeId == null}" class="text-muted">Aucune</span>
+                </div>
+                <span class="badge status-chip bg-secondary mt-1"
+                      th:if="${incident.commandeStatut != null}" th:text="${incident.commandeStatut}"></span>
+            </div>
+        </div>
+
+        <div class="row g-4 mb-4">
+            <!-- Timeline -->
+            <div class="col-lg-5">
+                <div class="app-card h-100">
+                    <div class="app-card__header">
+                        <h5 class="mb-0"><i class="bi bi-clock-history me-2"></i>Cycle de vie</h5>
+                    </div>
+                    <div class="app-card__body">
+                        <ul class="app-timeline mb-0">
+                            <li class="app-timeline__item">
+                                <div class="app-timeline__meta" th:text="${incident.dateAffichee}">—</div>
+                                <div class="app-timeline__title">Signalement</div>
+                                <div class="small text-muted" th:text="${incident.typeLibelle} ?: ${incident.type}">Type</div>
+                            </li>
+                            <li class="app-timeline__item" th:if="${incident.statut == 'EN_TRAITEMENT'}">
+                                <div class="app-timeline__title">Prise en charge</div>
+                                <div class="small text-muted">Traitement en cours</div>
+                            </li>
+                            <li class="app-timeline__item" th:if="${incident.statut == 'RESOLU'}">
+                                <div class="app-timeline__meta" th:text="${incident.dateResolutionAffichee}">—</div>
+                                <div class="app-timeline__title">Résolu</div>
+                                <div class="small text-muted" th:text="${incident.resolution}">—</div>
+                            </li>
+                            <li class="app-timeline__item" th:if="${incident.statut == 'REJETE'}">
+                                <div class="app-timeline__meta" th:text="${incident.dateResolutionAffichee}">—</div>
+                                <div class="app-timeline__title">Rejeté</div>
+                                <div class="small text-muted" th:text="${incident.resolution}">—</div>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Description -->
+            <div class="col-lg-7">
+                <div class="app-card h-100">
+                    <div class="app-card__header">
+                        <h5 class="mb-0"><i class="bi bi-card-text me-2"></i>Description</h5>
+                    </div>
+                    <div class="app-card__body">
+                        <p class="mb-0" style="white-space: pre-wrap;" th:text="${incident.description}">—</p>
+                        <dl class="row detail-list mt-4 mb-0">
+                            <dt class="col-5 col-md-4">Livreur</dt>
+                            <dd class="col-7 col-md-8" th:text="${incident.livreurNom} ?: '—'">—</dd>
+                            <dt class="col-5 col-md-4">Statut de la commande</dt>
+                            <dd class="col-7 col-md-8" th:text="${incident.commandeStatut} ?: '—'">—</dd>
+                        </dl>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Traitement -->
+        <div class="app-card mb-4 next-action-card">
+            <div class="app-card__header">
+                <h5 class="mb-0"><i class="bi bi-tools me-2"></i>Traitement</h5>
+            </div>
+            <div class="app-card__body">
+                <!-- Incident clôturé -->
+                <div th:if="${incident.statut == 'RESOLU' or incident.statut == 'REJETE'}">
+                    <div class="mb-2">
+                        <span class="badge status-chip"
+                              th:classappend="${incident.statut == 'RESOLU'} ? 'bg-success' : 'bg-secondary'"
+                              th:text="${incident.statutLibelle}">Statut</span>
+                        <span class="text-muted small ms-1"
+                              th:text="'le ' + ${incident.dateResolutionAffichee}"></span>
+                    </div>
+                    <p class="mb-0" style="white-space: pre-wrap;" th:text="${incident.resolution}">—</p>
+                    <div class="mt-3" th:if="${incident.transitionProposee != null}">
+                        <span class="text-muted small">Transition appliquée à la commande :</span>
+                        <span class="type-chip ms-1"><i class="bi bi-arrow-right"></i>
+                            <span th:text="${incident.transitionProposee}"></span>
+                        </span>
+                    </div>
+                </div>
+
+                <!-- Incident signalé -->
+                <div th:if="${incident.statut == 'SIGNALEE'}">
+                    <p class="text-muted">Incident signalé, pas encore pris en charge.</p>
+                    <form method="post" th:action="@{/incidents/{id}/traiter(id=${incident.id})}">
+                        <button type="submit" class="btn btn-warning btn-icon">
+                            <i class="bi bi-hand-index-thumb"></i> Prendre en charge
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Incident en traitement -->
+                <div th:if="${incident.statut == 'EN_TRAITEMENT'}">
+                    <form method="post" th:action="@{/incidents/{id}/resoudre(id=${incident.id})}" class="mb-4">
+                        <h6 class="mb-3"><i class="bi bi-check2-circle text-success me-1"></i>Résolution</h6>
+                        <div class="mb-3">
+                            <label class="form-label" for="resolution">Résolution <span class="text-danger">*</span></label>
+                            <textarea class="form-control" id="resolution" name="resolution" rows="3"
+                                      required placeholder="Compte rendu de traitement…"></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label" for="transition">Transition proposée sur la commande</label>
+                            <select class="form-select" id="transition" name="transition">
+                                <option value="">Aucune (le workflow reste inchangé)</option>
+                                <option th:each="t : ${transitionsProposables}"
+                                        th:value="${t.name()}" th:text="${t.name()}"></option>
+                            </select>
+                            <div class="form-text" th:if="${#lists.isEmpty(transitionsProposables)}">
+                                Aucune transition n'est possible depuis le statut actuel de la commande.
+                            </div>
+                            <div class="form-text" th:if="${incident.commandeId == null}">
+                                Cet incident n'est rattaché à aucune commande : aucune transition ne peut être appliquée.
+                            </div>
+                            <div class="form-text">
+                                LIVREE n'est pas proposé : une résolution d'incident ne vaut pas preuve de réception.
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-success btn-icon">
+                            <i class="bi bi-check2-all"></i> Résoudre l'incident
+                        </button>
+                    </form>
+
+                    <hr class="hr-soft">
+                    <form method="post" th:action="@{/incidents/{id}/rejeter(id=${incident.id})}">
+                        <h6 class="mb-3"><i class="bi bi-x-octagon text-danger me-1"></i>Rejet</h6>
+                        <div class="mb-3">
+                            <label class="form-label" for="motif">Motif du rejet <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="motif" name="motif"
+                                   required placeholder="Information erronée, hors périmètre…">
+                        </div>
+                        <button type="submit" class="btn btn-outline-danger btn-icon">
+                            <i class="bi bi-x-circle"></i> Rejeter l'incident
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Suppression -->
+        <div class="d-flex justify-content-end">
+            <form method="post" th:action="@{/incidents/delete/{id}(id=${incident.id})}">
+                <button type="submit" class="btn btn-sm btn-outline-danger btn-icon"
+                        data-confirm="Supprimer définitivement cet incident ?">
+                    <i class="bi bi-trash"></i> Supprimer l'incident
+                </button>
+            </form>
+        </div>
+    </div>
+    </main>
+
+    <script th:src="@{/js/app.js}"></script>
+</body>
+</html>

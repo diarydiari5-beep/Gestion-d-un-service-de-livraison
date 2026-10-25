@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="fr">
+<head th:replace="~{fragments/head :: head('Suivi des livreurs')}"></head>
+<body class="app-body">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+    <!-- Barre de navigation -->
+    <div th:replace="~{fragments/nav :: nav('carte')}"></div>
+
+    <main class="app-main">
+        <div class="carte-map">
+            <div id="map" class="map-fullscreen"></div>
+
+            <!-- En-tête overlay -->
+            <div class="map-overlay map-overlay--top">
+                <div class="map-overlay__card">
+                    <h1 class="map-overlay__title">
+                        <i class="bi bi-geo-alt me-1"></i> Carte temps réel
+                    </h1>
+                    <p class="map-overlay__subtitle">
+                        Positions des livreurs et des commandes
+                        <span id="derniereMAJ" class="d-block text-muted small">En attente de données…</span>
+                    </p>
+                </div>
+            </div>
+
+            <!-- Contrôles overlay -->
+            <div class="map-overlay map-overlay--controls">
+                <button type="button" id="btnRecenter" class="map-control" title="Recentrer sur les données">
+                    <i class="bi bi-crosshair"></i>
+                </button>
+                <button type="button" id="btnZoomIn" class="map-control" title="Zoom avant">
+                    <i class="bi bi-plus-lg"></i>
+                </button>
+                <button type="button" id="btnZoomOut" class="map-control" title="Zoom arrière">
+                    <i class="bi bi-dash-lg"></i>
+                </button>
+            </div>
+
+            <!-- Légende + panneau overlay -->
+            <div class="map-overlay map-overlay--panel">
+                <div class="map-overlay__card map-panel">
+                    <div class="map-panel__section">
+                        <h2 class="map-panel__title">Livreurs</h2>
+                        <ul class="map-legend-list">
+                            <li><i class="map-swatch" style="background:#198754"></i> Disponible</li>
+                            <li><i class="map-swatch" style="background:#fd7e14"></i> En livraison</li>
+                            <li><i class="map-swatch" style="background:#dc3545"></i> Indisponible</li>
+                            <li><i class="map-swatch" style="background:#6c757d"></i> Pause</li>
+                        </ul>
+                    </div>
+                    <div class="map-panel__section">
+                        <h2 class="map-panel__title">Commandes</h2>
+                        <ul class="map-legend-list">
+                            <li><i class="map-swatch" style="background:#0d6efd;border-radius:4px"></i> Enlèvement</li>
+                            <li><i class="map-swatch" style="background:#212529;border-radius:50%"></i> Livraison</li>
+                        </ul>
+                    </div>
+                    <div class="map-panel__section">
+                        <div class="map-panel__stats">
+                            <span><strong id="compteurLivreurs">0</strong> livreur(s)</span>
+                            <span><strong id="compteurCommandes">0</strong> commande(s)</span>
+                        </div>
+                    </div>
+                    <div class="map-panel__section map-panel__scroll">
+                        <h2 class="map-panel__title">Livreurs actifs</h2>
+                        <ul id="listeLivreurs" class="map-livreur-list">
+                            <li class="text-muted small">Aucune position disponible.</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script th:inline="javascript">
+        const suiviConfig = {
+            commandesUrl: /*[[@{/api/commandes/positions}]]*/ '/api/commandes/positions',
+            livreursUrl: /*[[@{/api/livreurs/positions}]]*/ '/api/livreurs/positions',
+            itineraireUrl: /*[[@{/api/commandes/}]]*/ '/api/commandes/',
+            detailUrl: /*[[@{/commandes/detail/}]]*/ '/commandes/detail/'
+        };
+    </script>
+    <script th:src="@{/js/app.js}"></script>
+    <script>
+        (function () {
+            'use strict';
+
+            const CENTRE = [-18.8792, 47.5079];
+            const cursors = new Map();
+            const marqueursCommande = new Map();
+            const liensCommande = new Map();
+            const geometries = new Map();
+            const polylines = new Map();
+            const TOLERANCE_ECART_METRES = 500;
+            const DELAI_NOUVELLE_TENTATIVE_MS = 15000;
+
+            const map = L.map('map', { zoomControl: false }).setView(CENTRE, 13);
+            L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                maxZoom: 19,
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+            }).addTo(map);
+
+            const groupeCommandes = L.layerGroup().addTo(map);
+            const groupeItineraires = L.layerGroup().addTo(map);
+
+            function couleurStatut(statut) {
+                switch (statut) {
+                    case 'DISPONIBLE': return '#198754';
+                    case 'EN_LIVRAISON': return '#fd7e14';
+                    case 'INDISPONIBLE': return '#dc3545';
+                    case 'PAUSE': return '#6c757d';
+                    default: return '#0d6efd';
+                }
+            }
+
+            function classeStatut(statut) {
+                switch (statut) {
+                    case 'DISPONIBLE': return 'bg-success';
+                    case 'EN_LIVRAISON': return 'bg-warning';
+                    case 'INDISPONIBLE': return 'bg-danger';
+                    case 'PAUSE': return 'bg-secondary';
+                    default: return 'bg-info';
+                }
+            }
+
+            function couleurPriorite(priorite, type) {
+                const p = (priorite || '').toUpperCase();
+                if (p === 'EXPRESS') { return '#EF4444'; }
+                if (p === 'URGENTE') { return '#F59E0B'; }
+                return type === 'enlevement' ? '#0d6efd' : '#212529';
+            }
+
+            function iconeLivreur(statut) {
+                return L.divIcon({
+                    className: 'app-map-pin',
+                    html: '<span class="app-map-pin__dot" style="background:' + couleurStatut(statut) + '"><i class="bi bi-bicycle"></i></span>',
+                    iconSize: [30, 30],
+                    iconAnchor: [15, 15],
+                    popupAnchor: [0, -15]
+                });
+            }
+
+            function iconeEnlevement(priorite) {
+                return L.divIcon({
+                    className: 'app-map-pin',
+                    html: '<span class="app-map-pin__square" style="background:' + couleurPriorite(priorite, 'enlevement') + '"></span>',
+                    iconSize: [22, 22],
+                    iconAnchor: [11, 11],
+                    popupAnchor: [0, -11]
+                });
+            }
+
+            function iconeLivraison(priorite) {
+                return L.divIcon({
+                    className: 'app-map-pin',
+                    html: '<span class="app-map-pin__circle" style="background:' + couleurPriorite(priorite, 'livraison') + '"></span>',
+                    iconSize: [22, 22],
+                    iconAnchor: [11, 11],
+                    popupAnchor: [0, -11]
+                });
+            }
+
+            function popupCommande(commande, type) {
+                const titre = type === 'enlevement' ? 'Enlèvement' : 'Livraison';
+                return '<div class="app-map-popup">' +
+                    '<div class="app-map-popup__title"><i class="bi bi-box-seam"></i> ' + titre + '</div>' +
+                    '<dl class="app-map-popup__rows">' +
+                    '<dt>Commande</dt><dd>' + (commande.numero || '-') + '</dd>' +
+                    '<dt>Statut</dt><dd>' + (commande.statut || '-') + '</dd>' +
+                    '<dt>Priorité</dt><dd>' + (commande.priorite || '-') + '</dd>' +
+                    '<dt>Livreur</dt><dd>' + (commande.livreurNom || 'non assigné') + '</dd>' +
+                    '</dl>' +
+                    '<a class="app-map-popup__link" href="' + suiviConfig.detailUrl + commande.id + '">Ouvrir la commande</a>' +
+                    '</div>';
+            }
+
+            function dessinerCommandes(commandes) {
+                const idsPresents = new Set();
+                commandes.forEach(c => {
+                    idsPresents.add(c.id);
+                    const points = [
+                        [c.latitudeEnlevement, c.longitudeEnlevement],
+                        [c.latitudeLivraison, c.longitudeLivraison]
+                    ];
+                    const types = ['enlevement', 'livraison'];
+                    if (!marqueursCommande.has(c.id)) {
+                        marqueursCommande.set(c.id, []);
+                        liensCommande.set(c.id, null);
+                    }
+                    const marqueurs = marqueursCommande.get(c.id);
+                    types.forEach((type, index) => {
+                        const icone = type === 'enlevement' ? iconeEnlevement(c.priorite) : iconeLivraison(c.priorite);
+                        if (!marqueurs[index]) {
+                            marqueurs[index] = L.marker(points[index], { icon: icone }).addTo(groupeCommandes);
+                            marqueurs[index].bindPopup('');
+                            liensCommande.set(c.id, L.polyline(points, {
+                                color: '#0d6efd',
+                                weight: 2,
+                                opacity: 0.5,
+                                dashArray: '5 5'
+                            }).addTo(groupeCommandes));
+                        } else {
+                            marqueurs[index].setLatLng(points[index]).setIcon(icone);
+                        }
+                        marqueurs[index].setPopupContent(popupCommande(c, type));
+                    });
+                });
+                marqueursCommande.forEach((marqueurs, id) => {
+                    if (!idsPresents.has(id)) {
+                        marqueurs.forEach(marker => groupeCommandes.removeLayer(marker));
+                        const lien = liensCommande.get(id);
+                        if (lien) {
+                            groupeCommandes.removeLayer(lien);
+                        }
+                        marqueursCommande.delete(id);
+                        liensCommande.delete(id);
+                    }
+                });
+                const compteur = document.getElementById('compteurCommandes');
+                if (compteur) { compteur.textContent = commandes.length; }
+            }
+
+            function versCible(commande) {
+                return (commande.statut || '').toUpperCase() === 'ASSIGNEE' ? 'enlevement' : 'livraison';
+            }
+
+            function signatureItineraire(commande) {
+                const cible = versCible(commande);
+                const lat = cible === 'enlevement' ? commande.latitudeEnlevement : commande.latitudeLivraison;
+                const lon = cible === 'enlevement' ? commande.longitudeEnlevement : commande.longitudeLivraison;
+                return [commande.id, commande.livreurId || '', cible, lat, lon].join(':');
+            }
+
+            function positionLivreur(livreurId) {
+                const marqueur = cursors.get(livreurId);
+                if (!marqueur) {
+                    return null;
+                }
+                const latlng = marqueur.getLatLng();
+                return [latlng.lat, latlng.lng];
+            }
+
+            function distanceCarreeMetres(a, b) {
+                const dy = (a[0] - b[0]) * 111320;
+                const dx = (a[1] - b[1]) * 105000;
+                return dx * dx + dy * dy;
+            }
+
+            function pointLePlusProche(points, position) {
+                let index = 0;
+                let minimum = Infinity;
+                for (let i = 0; i < points.length; i++) {
+                    const distance = distanceCarreeMetres(points[i], position);
+                    if (distance < minimum) {
+                        minimum = distance;
+                        index = i;
+                    }
+                }
+                return { index: index, distance: minimum };
+            }
+
+            function tracerItineraire(commande) {
+                const cache = geometries.get(commande.id);
+                if (!cache || !cache.points || cache.points.length < 2) {
+                    return;
+                }
+                const position = positionLivreur(commande.livreurId);
+                if (!position) {
+                    return;
+                }
+                const plusProche = pointLePlusProche(cache.points, position);
+                const trace = [position].concat(cache.points.slice(plusProche.index));
+                let ligne = polylines.get(commande.id);
+                if (!ligne) {
+                    ligne = L.polyline(trace, { color: '#0d47a1', weight: 4, opacity: 0.85 }).addTo(groupeItineraires);
+                    polylines.set(commande.id, ligne);
+                } else {
+                    ligne.setLatLngs(trace);
+                }
+            }
+
+            function chargerItineraire(commande) {
+                const signature = signatureItineraire(commande);
+                const cache = geometries.get(commande.id);
+                if (cache && cache.signature === signature) {
+                    if (cache.points && cache.points.length >= 2) {
+                        const position = positionLivreur(commande.livreurId);
+                        if (position) {
+                            const plusProche = pointLePlusProche(cache.points, position);
+                            if (plusProche.distance <= TOLERANCE_ECART_METRES * TOLERANCE_ECART_METRES) {
+                                tracerItineraire(commande);
+                                return;
+                            }
+                        }
+                    } else if (Date.now() - cache.tentative < DELAI_NOUVELLE_TENTATIVE_MS) {
+                        return;
+                    }
+                }
+                fetch(suiviConfig.itineraireUrl + commande.id + '/itineraire?vers=' + versCible(commande))
+                    .then(response => response.ok ? response.json() : null)
+                    .then(route => {
+                        if (!route || !route.points || route.points.length < 2) {
+                            geometries.set(commande.id, { signature: signature, points: [], tentative: Date.now() });
+                            return;
+                        }
+                        geometries.set(commande.id, { signature: signature, points: route.points, tentative: Date.now() });
+                        tracerItineraire(commande);
+                    })
+                    .catch(() => {
+                        geometries.set(commande.id, { signature: signature, points: [], tentative: Date.now() });
+                    });
+            }
+
+            function rafraichirItineraires(commandes) {
+                const idsPresents = new Set();
+                commandes.forEach(commande => {
+                    if (commande.livreurId === null || commande.livreurId === undefined) {
+                        return;
+                    }
+                    idsPresents.add(commande.id);
+                    chargerItineraire(commande);
+                });
+                polylines.forEach((ligne, id) => {
+                    if (!idsPresents.has(id)) {
+                        groupeItineraires.removeLayer(ligne);
+                        polylines.delete(id);
+                    }
+                });
+                geometries.forEach((cache, id) => {
+                    if (!idsPresents.has(id)) {
+                        geometries.delete(id);
+                    }
+                });
+            }
+
+            function rafraichirCommandes() {
+                return fetch(suiviConfig.commandesUrl)
+                    .then(response => response.json())
+                    .then(commandes => {
+                        dessinerCommandes(commandes);
+                        rafraichirItineraires(commandes);
+                        return commandes;
+                    });
+            }
+
+            function rendreListeLivreurs(livreurs) {
+                const liste = document.getElementById('listeLivreurs');
+                if (!liste) { return; }
+                if (!livreurs.length) {
+                    liste.innerHTML = '<li class="text-muted small">Aucune position disponible.</li>';
+                    return;
+                }
+                liste.innerHTML = livreurs.map(l => {
+                    const nom = ((l.prenom || '') + ' ' + (l.nom || '')).trim() || 'Livreur';
+                    return '<li class="map-livreur-list__item">' +
+                        '<span class="map-swatch map-swatch--dot" style="background:' + couleurStatut(l.statut) + '"></span>' +
+                        '<span class="map-livreur-list__name">' + nom + '</span>' +
+                        '<span class="badge ' + classeStatut(l.statut) + ' ms-auto">' + (l.statut || '-') + '</span>' +
+                        (l.zoneActivite ? '<small class="text-muted w-100">' + l.zoneActivite + '</small>' : '') +
+                        '</li>';
+                }).join('');
+            }
+
+            function chargerPositions() {
+                fetch(suiviConfig.livreursUrl)
+                    .then(response => response.json())
+                    .then(livreurs => {
+                        livreurs.forEach(l => {
+                            if (l.latitude === null || l.longitude === null) {
+                                return;
+                            }
+                            const pos = [l.latitude, l.longitude];
+                            let marker = cursors.get(l.id);
+                            if (!marker) {
+                                marker = L.marker(pos, { icon: iconeLivreur(l.statut) }).addTo(map);
+                                marker.bindPopup('');
+                                cursors.set(l.id, marker);
+                            } else {
+                                marker.setLatLng(pos).setIcon(iconeLivreur(l.statut));
+                            }
+                            const nomPrenom = ((l.prenom || '') + ' ' + (l.nom || '')).trim();
+                            marker.setPopupContent(
+                                '<div class="app-map-popup">' +
+                                '<div class="app-map-popup__title"><i class="bi bi-bicycle"></i> ' + (nomPrenom || 'Livreur') + '</div>' +
+                                '<dl class="app-map-popup__rows">' +
+                                '<dt>Statut</dt><dd>' + (l.statut || '-') + '</dd>' +
+                                '<dt>Zone</dt><dd>' + (l.zoneActivite || '-') + '</dd>' +
+                                '<dt>Position</dt><dd>' + l.latitude.toFixed(5) + ', ' + l.longitude.toFixed(5) + '</dd>' +
+                                '</dl></div>'
+                            );
+                        });
+                        cursors.forEach((marker, id) => {
+                            if (!livreurs.some(l => l.id === id)) {
+                                map.removeLayer(marker);
+                                cursors.delete(id);
+                            }
+                        });
+                        const compteur = document.getElementById('compteurLivreurs');
+                        if (compteur) { compteur.textContent = cursors.size; }
+                        rendreListeLivreurs(livreurs.filter(l => l.latitude !== null && l.longitude !== null));
+                        return rafraichirCommandes();
+                    })
+                    .then(() => {
+                        const now = new Date();
+                        const el = document.getElementById('derniereMAJ');
+                        if (el) {
+                            el.textContent = 'Dernière mise à jour : ' + now.toLocaleTimeString();
+                        }
+                    });
+            }
+
+            document.getElementById('btnRecenter').addEventListener('click', function () {
+                const positions = [];
+                cursors.forEach(m => { const ll = m.getLatLng(); positions.push([ll.lat, ll.lng]); });
+                marqueursCommande.forEach(marqueurs => marqueurs.forEach(m => {
+                    if (m) { const ll = m.getLatLng(); positions.push([ll.lat, ll.lng]); }
+                }));
+                if (positions.length > 1) {
+                    map.fitBounds(positions, { padding: [60, 60], maxZoom: 15 });
+                } else if (positions.length === 1) {
+                    map.setView(positions[0], 15);
+                } else {
+                    map.setView(CENTRE, 13);
+                }
+            });
+            document.getElementById('btnZoomIn').addEventListener('click', function () { map.zoomIn(); });
+            document.getElementById('btnZoomOut').addEventListener('click', function () { map.zoomOut(); });
+
+            chargerPositions();
+            setInterval(chargerPositions, 3000);
+        })();
+    </script>
+</body>
+</html>

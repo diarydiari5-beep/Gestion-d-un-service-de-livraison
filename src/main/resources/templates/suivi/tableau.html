@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="fr">
+<head th:replace="~{fragments/head :: head('Tableau de bord du suivi')}"></head>
+<body class="app-body">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+    <!-- Barre de navigation -->
+    <div th:replace="~{fragments/nav :: nav('suivi')}"></div>
+
+    <main class="app-main">
+    <div class="container-fluid app-page">
+        <div class="page-header">
+            <div>
+                <h1 class="page-header__title">Suivi des livraisons en cours</h1>
+                <p class="page-header__subtitle">
+                    Supervision temps réel des tournées actives
+                    <span th:if="${dernierCalcul != null}">— calculé à <span th:text="${dernierCalcul}">—</span></span>
+                </p>
+            </div>
+            <div class="page-header__actions">
+                <button type="button" class="btn btn-outline-secondary btn-icon"
+                        onclick="window.location.reload()">
+                    <i class="bi bi-arrow-clockwise"></i> Actualiser
+                </button>
+                <a th:href="@{/incidents}" class="btn btn-outline-warning btn-icon">
+                    <i class="bi bi-exclamation-triangle"></i> Incidents
+                </a>
+            </div>
+        </div>
+
+        <!-- KPI -->
+        <div class="kpi-grid">
+            <div class="kpi-card kpi-card--info">
+                <span class="kpi-card__icon"><i class="bi bi-truck"></i></span>
+                <span class="kpi-card__label">Livraisons en cours</span>
+                <div class="kpi-card__value" th:text="${enCours}">0</div>
+                <div class="kpi-card__trend"><i class="bi bi-dot"></i> tournées actives</div>
+            </div>
+            <div class="kpi-card kpi-card--danger">
+                <span class="kpi-card__icon"><i class="bi bi-alarm"></i></span>
+                <span class="kpi-card__label">En retard</span>
+                <div class="kpi-card__value" th:text="${enRetard}">0</div>
+                <div class="kpi-card__trend is-down"><i class="bi bi-arrow-down-right"></i> au-delà de l'ETA</div>
+            </div>
+            <div class="kpi-card kpi-card--success">
+                <span class="kpi-card__icon"><i class="bi bi-bicycle"></i></span>
+                <span class="kpi-card__label">Livreurs mobilisés</span>
+                <div class="kpi-card__value" th:text="${livreursMobilises}">0</div>
+                <div class="kpi-card__trend"><i class="bi bi-dot"></i> en activité</div>
+            </div>
+            <div class="kpi-card kpi-card--warning">
+                <span class="kpi-card__icon"><i class="bi bi-exclamation-octagon"></i></span>
+                <span class="kpi-card__label">Avec incident ouvert</span>
+                <div class="kpi-card__value" th:text="${avecIncident}">0</div>
+                <div class="kpi-card__trend"><i class="bi bi-dot"></i> à traiter</div>
+            </div>
+        </div>
+
+        <!-- Carte + timeline -->
+        <div class="row g-3 mb-4 suivi-grid">
+            <div class="col-xl-7">
+                <div class="app-card h-100">
+                    <div class="app-card__header">
+                        <h5 class="mb-0"><i class="bi bi-map me-2"></i>Carte des commandes</h5>
+                        <div class="map-toolbar">
+                            <span id="derniereMAJ" class="text-muted small"></span>
+                            <button type="button" id="btnRecenter" class="btn btn-sm btn-outline-secondary btn-icon">
+                                <i class="bi bi-crosshair"></i> Recentrer
+                            </button>
+                        </div>
+                    </div>
+                    <div class="app-card__body p-0 position-relative">
+                        <div id="map" class="map-suivi"></div>
+                        <div class="map-legend">
+                            <span class="map-legend__item"><i class="map-swatch" style="background:#0EA5E9;border-radius:4px;"></i> Enlèvement</span>
+                            <span class="map-legend__item"><i class="map-swatch" style="background:#4F46E5;border-radius:50%;"></i> Livraison</span>
+                            <span class="map-legend__item"><i class="map-swatch" style="background:#EF4444;"></i> Express</span>
+                            <span class="map-legend__item"><i class="map-swatch" style="background:#F59E0B;"></i> Urgente</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-xl-5">
+                <div class="app-card h-100">
+                    <div class="app-card__header">
+                        <h5 class="mb-0"><i class="bi bi-list-check me-2"></i>Commandes en cours</h5>
+                        <span class="badge bg-secondary" th:text="${enCours} + ' active(s)'">0</span>
+                    </div>
+                    <div class="app-card__body suivi-list-scroll">
+                        <p class="text-muted mb-0" th:if="${#lists.isEmpty(lignes)}">
+                            Aucune livraison en cours. Assignez un livreur à une commande pour la voir apparaître ici.
+                        </p>
+                        <ul class="app-timeline mb-0" th:unless="${#lists.isEmpty(lignes)}">
+                            <li class="app-timeline__item" th:each="ligne : ${lignes}">
+                                <div class="app-timeline__meta d-flex flex-wrap align-items-center gap-1">
+                                    <a class="fw-semibold text-decoration-none"
+                                       th:href="@{/commandes/detail/{id}(id=${ligne.id})}"
+                                       th:text="${ligne.numero}">DEMO</a>
+                                    <span class="badge priority-chip bg-secondary" th:if="${ligne.priorite == 'EXPRESS'}">EXPRESS</span>
+                                    <span class="badge priority-chip bg-warning" th:if="${ligne.priorite == 'URGENTE'}">URGENTE</span>
+                                </div>
+                                <div class="app-timeline__title" th:text="${ligne.clientNom}">Client</div>
+                                <div class="small text-muted">
+                                    <span th:text="${ligne.phase}">Phase</span>
+                                    <span> · vers <span th:text="${ligne.cibleLibelle}">…</span></span>
+                                    <span th:if="${ligne.zoneLivraison != null}"> · <i class="bi bi-geo-alt"></i> <span th:text="${ligne.zoneLivraison}"></span></span>
+                                </div>
+                                <div class="d-flex flex-wrap align-items-center gap-2 mt-1">
+                                    <span class="small" th:if="${ligne.livreurNom != null}">
+                                        <i class="bi bi-person-badge"></i> <span th:text="${ligne.livreurNom}">Livreur</span>
+                                    </span>
+                                    <span class="small text-danger" th:if="${ligne.livreurNom == null}">
+                                        <i class="bi bi-person-x"></i> Non assigné
+                                    </span>
+                                    <span class="small text-muted" th:if="${ligne.etaAffichee != '—'}">
+                                        <i class="bi bi-clock"></i> ETA <span th:text="${ligne.etaAffichee}"></span>
+                                    </span>
+                                </div>
+                                <div class="progress mt-2" role="progressbar" style="height: 8px;"
+                                     th:if="${ligne.avancement != null}"
+                                     th:attr="aria-valuenow=${ligne.avancement}, aria-valuemin=0, aria-valuemax=100">
+                                    <div class="progress-bar bg-success" th:style="'width:' + ${ligne.avancement} + '%'"></div>
+                                </div>
+                                <span class="small text-muted" th:if="${ligne.avancement == null}">En cours de collecte</span>
+                                <div class="mt-1" th:if="${!#lists.isEmpty(ligne.alertes)}">
+                                    <span th:each="alerte : ${ligne.alertes}" class="badge me-1"
+                                          th:classappend="${alerte.couleur}" th:text="${alerte.libelle}">Alerte</span>
+                                </div>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="alert alert-info py-2 d-flex align-items-center gap-2" role="alert">
+            <i class="bi bi-info-circle"></i>
+            <span>Les positions de la carte se rafraîchissent toutes les 5 secondes. Les distances proviennent de
+            l'itinéraire routier (OpenRouteService) ; si le service de routage est injoignable, la distance est une
+            estimation en ligne droite.</span>
+        </div>
+
+        <!-- Détail tabulaire -->
+        <div class="app-table-wrap table-responsive">
+            <table class="table table-hover app-table" id="suiviTable">
+                <thead>
+                    <tr>
+                        <th>Numéro</th>
+                        <th>Client / Zone</th>
+                        <th>Phase</th>
+                        <th>Livreur</th>
+                        <th>Avancement</th>
+                        <th>Distance restante</th>
+                        <th>ETA</th>
+                        <th>Prévue le</th>
+                        <th>Alertes</th>
+                        <th class="text-end">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="ligne : ${lignes}" data-filter-row>
+                        <td>
+                            <div class="fw-semibold" th:text="${ligne.numero}">DEMO-CMD-001</div>
+                            <span class="badge priority-chip bg-danger" th:if="${ligne.priorite == 'EXPRESS'}">EXPRESS</span>
+                            <span class="badge priority-chip bg-warning" th:if="${ligne.priorite == 'URGENTE'}">URGENTE</span>
+                        </td>
+                        <td>
+                            <div th:text="${ligne.clientNom}">Client</div>
+                            <small class="text-muted" th:text="${ligne.zoneLivraison}">zone</small>
+                        </td>
+                        <td>
+                            <div th:text="${ligne.phase}">Phase</div>
+                            <small class="text-muted" th:text="'Vers : ' + ${ligne.cibleLibelle}">Vers : …</small>
+                        </td>
+                        <td>
+                            <div th:if="${ligne.livreurNom != null}" th:text="${ligne.livreurNom}">Livreur</div>
+                            <div th:if="${ligne.livreurNom == null}" class="text-danger">Non assigné</div>
+                            <small class="text-muted" th:if="${ligne.livreurStatut != null}"
+                                   th:text="${ligne.livreurStatut + ' · ' + ligne.commandesActives + ' cmd(s)'}"></small>
+                        </td>
+                        <td style="min-width: 140px;">
+                            <div th:if="${ligne.avancement != null}">
+                                <div class="progress" role="progressbar" style="height: 18px;"
+                                     th:attr="aria-valuenow=${ligne.avancement}, aria-valuemin=0, aria-valuemax=100">
+                                    <div class="progress-bar bg-success" th:style="'width:' + ${ligne.avancement} + '%'"
+                                         th:text="${ligne.avancement + ' %'}">0 %</div>
+                                </div>
+                            </div>
+                            <span th:if="${ligne.avancement == null}" class="text-muted">En cours de collecte</span>
+                        </td>
+                        <td>
+                            <div th:text="${ligne.distanceAffichee}">—</div>
+                            <small th:if="${ligne.distanceRoutiere}" class="text-success" th:text="${ligne.libelleDistance}"></small>
+                            <small th:if="${ligne.distanceRoutiere == false and ligne.libelleDistance != '—'}"
+                                   class="text-warning" th:text="${ligne.libelleDistance}"></small>
+                        </td>
+                        <td th:text="${ligne.etaAffichee}">—</td>
+                        <td th:text="${ligne.datePrevueAffichee}">—</td>
+                        <td>
+                            <span th:each="alerte : ${ligne.alertes}" class="badge me-1"
+                                  th:classappend="${alerte.couleur}" th:text="${alerte.libelle}">Alerte</span>
+                        </td>
+                        <td class="text-end">
+                            <a th:href="@{/commandes/detail/{id}(id=${ligne.id})}"
+                               class="btn btn-sm btn-outline-primary btn-action-icon"
+                               data-bs-toggle="tooltip" title="Suivre">
+                                <i class="bi bi-eye"></i>
+                            </a>
+                        </td>
+                    </tr>
+                    <tr th:if="${#lists.isEmpty(lignes)}" data-no-filter>
+                        <td colspan="10">
+                            <div class="app-empty-state">
+                                <i class="bi bi-inbox"></i>
+                                <strong>Aucune livraison en cours</strong>
+                                <div class="mt-1">Assignez un livreur à une commande pour la voir apparaître ici.</div>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script th:inline="javascript">
+        const suiviConfig = {
+            positionsUrl: /*[[@{/api/orders/positions}]]*/ '/api/orders/positions',
+            detailUrl: /*[[@{/commandes/detail/}]]*/ '/commandes/detail/',
+            intervalMs: 5000
+        };
+    </script>
+    <script th:src="@{/js/app.js}"></script>
+    <script>
+        (function () {
+            'use strict';
+            var CENTRE = [-18.8792, 47.5079];
+
+            var map = L.map('map').setView(CENTRE, 13);
+            L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                maxZoom: 19,
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+            }).addTo(map);
+
+            var groupe = L.layerGroup().addTo(map);
+            var dernieresPositions = [];
+
+            function couleurPoint(type, priorite) {
+                if (priorite === 'EXPRESS') { return '#EF4444'; }
+                if (priorite === 'URGENTE') { return '#F59E0B'; }
+                return type === 'enlevement' ? '#0EA5E9' : '#4F46E5';
+            }
+
+            function iconeCommande(type, priorite) {
+                var forme = type === 'enlevement' ? 'border-radius:6px;' : 'border-radius:50%;';
+                return L.divIcon({
+                    className: 'app-map-pin',
+                    html: '<span style="background:' + couleurPoint(type, priorite) + ';' + forme + '"></span>',
+                    iconSize: [20, 20],
+                    iconAnchor: [10, 10],
+                    popupAnchor: [0, -10]
+                });
+            }
+
+            function popupCommande(commande, type) {
+                var titre = type === 'enlevement' ? 'Enlèvement' : 'Livraison';
+                return '<div class="app-map-popup">' +
+                    '<strong>' + titre + '</strong>' +
+                    '<div class="small">Commande : ' + (commande.numero || '-') + '</div>' +
+                    '<div class="small">Statut : ' + (commande.statut || '-') + '</div>' +
+                    '<div class="small">Priorité : ' + (commande.priorite || '-') + '</div>' +
+                    '<div class="small">Livreur : ' + (commande.livreurNom || 'non assigné') + '</div>' +
+                    '<a class="app-map-popup__link" href="' + suiviConfig.detailUrl + commande.id + '">Ouvrir la commande</a>' +
+                    '</div>';
+            }
+
+            function majHorodatage() {
+                var el = document.getElementById('derniereMAJ');
+                if (el) {
+                    el.textContent = 'MAJ ' + new Date().toLocaleTimeString();
+                }
+            }
+
+            function rafraichir() {
+                fetch(suiviConfig.positionsUrl)
+                    .then(function (r) { return r.ok ? r.json() : []; })
+                    .then(function (commandes) {
+                        groupe.clearLayers();
+                        dernieresPositions = [];
+                        commandes.forEach(function (c) {
+                            var points = [
+                                [c.latitudeEnlevement, c.longitudeEnlevement, 'enlevement'],
+                                [c.latitudeLivraison, c.longitudeLivraison, 'livraison']
+                            ];
+                            points.forEach(function (p) {
+                                if (p[0] === null || p[0] === undefined || p[1] === null || p[1] === undefined) {
+                                    return;
+                                }
+                                var marqueur = L.marker([p[0], p[1]], { icon: iconeCommande(p[2], c.priorite) });
+                                marqueur.bindPopup(popupCommande(c, p[2]));
+                                marqueur.addTo(groupe);
+                                dernieresPositions.push([p[0], p[1]]);
+                            });
+                        });
+                        majHorodatage();
+                    })
+                    .catch(function () { majHorodatage(); });
+            }
+
+            var btnRecenter = document.getElementById('btnRecenter');
+            if (btnRecenter) {
+                btnRecenter.addEventListener('click', function () {
+                    if (dernieresPositions.length > 1) {
+                        map.fitBounds(dernieresPositions, { padding: [40, 40], maxZoom: 15 });
+                    } else if (dernieresPositions.length === 1) {
+                        map.setView(dernieresPositions[0], 15);
+                    } else {
+                        map.setView(CENTRE, 13);
+                    }
+                });
+            }
+
+            rafraichir();
+            setInterval(rafraichir, suiviConfig.intervalMs);
+        })();
+    </script>
+</body>
+</html>

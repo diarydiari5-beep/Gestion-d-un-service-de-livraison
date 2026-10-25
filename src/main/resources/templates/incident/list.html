@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="fr">
+<head th:replace="~{fragments/head :: head('Incidents')}"></head>
+<body class="app-body">
+    <!-- Barre de navigation -->
+    <div th:replace="~{fragments/nav :: nav('incidents')}"></div>
+
+    <main class="app-main">
+    <div class="container-fluid app-page">
+        <div class="page-header">
+            <div>
+                <h1 class="page-header__title">Incidents de livraison</h1>
+                <p class="page-header__subtitle">Signalement, traitement et résolution</p>
+            </div>
+            <div class="page-header__actions">
+                <a th:href="@{/incidents/new}" class="btn btn-primary btn-icon">
+                    <i class="bi bi-plus-lg"></i> Signaler un incident
+                </a>
+            </div>
+        </div>
+
+        <div th:replace="~{fragments/flash :: flash}"></div>
+
+        <div class="kpi-grid">
+            <div class="kpi-card kpi-card--danger">
+                <span class="kpi-card__icon"><i class="bi bi-exclamation-octagon"></i></span>
+                <span class="kpi-card__label">Ouverts</span>
+                <div class="kpi-card__value" th:text="${nombreOuverts}">0</div>
+            </div>
+            <div class="kpi-card" th:each="s : ${statuts}"
+                 th:classappend="${s.name() == 'SIGNALEE'} ? 'kpi-card--danger'
+                                : (${s.name() == 'EN_TRAITEMENT'} ? 'kpi-card--warning'
+                                : (${s.name() == 'RESOLU'} ? 'kpi-card--success' : ''))">
+                <span class="kpi-card__label" th:text="${s.name()}">STATUT</span>
+                <div class="kpi-card__value" th:text="${compteursStatut[s.name()]}">0</div>
+            </div>
+        </div>
+
+        <div class="filter-bar">
+            <form method="get" th:action="@{/incidents}" class="d-flex flex-wrap gap-3 align-items-end flex-grow-1">
+                <div class="filtre-champ">
+                    <label class="form-label mb-1" for="statut">Statut</label>
+                    <select class="form-select" id="statut" name="statut">
+                        <option value="">Tous</option>
+                        <option th:each="s : ${statuts}" th:value="${s.name()}" th:text="${s.name()}"
+                                th:selected="${statutSelectionne != null and statutSelectionne.name() == s.name()}"></option>
+                    </select>
+                </div>
+                <div class="filtre-champ">
+                    <label class="form-label mb-1" for="type">Type</label>
+                    <select class="form-select" id="type" name="type">
+                        <option value="">Tous</option>
+                        <option th:each="t : ${types}" th:value="${t.name()}" th:text="${t.name()}"
+                                th:selected="${typeSelectionne != null and typeSelectionne.name() == t.name()}"></option>
+                    </select>
+                </div>
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn btn-primary btn-icon">
+                        <i class="bi bi-funnel"></i> Filtrer
+                    </button>
+                    <a th:href="@{/incidents}" class="btn btn-outline-secondary btn-icon">
+                        <i class="bi bi-arrow-counterclockwise"></i> Réinitialiser
+                    </a>
+                </div>
+            </form>
+            <div class="filter-bar__search">
+                <i class="bi bi-search"></i>
+                <input type="search" placeholder="Rechercher dans la page…"
+                       aria-label="Filtrer les incidents" autocomplete="off"
+                       data-table-filter="#incidentsTable">
+            </div>
+        </div>
+
+        <div class="app-table-wrap table-responsive">
+            <table class="table table-hover app-table" id="incidentsTable">
+                <thead>
+                    <tr>
+                        <th>Signalé le</th>
+                        <th>Type</th>
+                        <th>Statut</th>
+                        <th>Description</th>
+                        <th>Commande</th>
+                        <th>Livreur</th>
+                        <th>Résolution</th>
+                        <th class="text-end">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="incident : ${incidents}" data-filter-row>
+                        <td class="text-nowrap text-muted" th:text="${incident.dateAffichee}">—</td>
+                        <td>
+                            <span class="type-chip"><i class="bi bi-tag"></i>
+                                <span th:text="${incident.typeLibelle} ?: ${incident.type}">Type</span>
+                            </span>
+                        </td>
+                        <td>
+                            <span class="badge status-chip" th:text="${incident.statut}"
+                                  th:classappend="${incident.statut == 'SIGNALEE'} ? 'bg-danger'
+                                                : (${incident.statut == 'EN_TRAITEMENT'} ? 'bg-warning'
+                                                : (${incident.statut == 'RESOLU'} ? 'bg-success' : 'bg-secondary'))">
+                                Statut
+                            </span>
+                        </td>
+                        <td th:text="${incident.description}">—</td>
+                        <td>
+                            <a th:if="${incident.commandeId != null}"
+                               th:href="@{/commandes/detail/{id}(id=${incident.commandeId})}"
+                               th:text="${incident.commandeNumero}">—</a>
+                            <span th:if="${incident.commandeId == null}" class="text-muted">—</span>
+                            <span class="badge status-chip bg-secondary ms-1"
+                                  th:if="${incident.commandeStatut != null}"
+                                  th:text="${incident.commandeStatut}"></span>
+                        </td>
+                        <td th:text="${incident.livreurNom != null} ? ${incident.livreurNom} : '—'">—</td>
+                        <td class="small">
+                            <span th:if="${incident.resolution != null}" th:text="${incident.resolution}">—</span>
+                            <span th:if="${incident.resolution == null}" class="text-muted">—</span>
+                            <div th:if="${incident.transitionProposee != null}" class="mt-1">
+                                <span class="type-chip"><i class="bi bi-arrow-right"></i>
+                                    <span th:text="${incident.transitionProposee}"></span>
+                                </span>
+                            </div>
+                        </td>
+                        <td class="text-end text-nowrap">
+                            <a th:href="@{/incidents/{id}(id=${incident.id})}"
+                               class="btn btn-sm btn-outline-primary btn-action-icon"
+                               data-bs-toggle="tooltip" title="Ouvrir le détail">
+                                <i class="bi bi-box-arrow-up-right"></i>
+                            </a>
+                        </td>
+                    </tr>
+                    <tr th:if="${#lists.isEmpty(incidents)}" data-no-filter>
+                        <td colspan="8">
+                            <div class="app-empty-state">
+                                <i class="bi bi-clipboard-check"></i>
+                                <strong>Aucun incident trouvé</strong>
+                                <div class="mt-1">Modifiez les filtres ou signalez un nouvel incident.</div>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="app-card mt-4">
+            <div class="app-card__header">
+                <h5 class="mb-0"><i class="bi bi-pie-chart me-2"></i>Répartition par type</h5>
+            </div>
+            <div class="app-card__body">
+                <div class="d-flex flex-wrap gap-3">
+                    <div class="d-flex align-items-center gap-2" th:each="t : ${types}">
+                        <span class="type-chip" th:text="${t.name()}">TYPE</span>
+                        <span class="badge status-chip bg-secondary" th:text="${compteursType[t.name()]}">0</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    </main>
+
+    <script th:src="@{/js/app.js}"></script>
+</body>
+</html>
